@@ -17,8 +17,8 @@ import { cn } from '@/lib/utils'
 type Intent = 'signin' | 'signup'
 
 const INTENT_OPTIONS: { value: Intent; label: string; description: string }[] = [
-    { value: 'signin', label: 'Sign in', description: 'Returning teammate' },
-    { value: 'signup', label: 'Join', description: 'New invitee' },
+    { value: 'signin', label: 'Sign in', description: 'Returning member' },
+    { value: 'signup', label: 'Join', description: 'First-time guest' },
 ]
 
 export function AuthForm() {
@@ -41,12 +41,12 @@ export function AuthForm() {
         <Card className="border-none bg-card/80 shadow-xl shadow-black/5 backdrop-blur">
             <CardHeader className="space-y-2 text-center">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.4em] text-muted-foreground">
-                    Supabase Magic Link
+                    RSVP Link
                 </p>
-                <CardTitle className="text-2xl">Verify your email</CardTitle>
+                <CardTitle className="text-2xl">Check your inbox</CardTitle>
                 <CardDescription>
                     Choose whether you&apos;re signing in or joining for the first time. We&apos;ll
-                    email you a secure link either way.
+                    email you a secure invite either way.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -78,7 +78,7 @@ export function AuthForm() {
                 <form ref={formRef} action={formAction} className="space-y-4" noValidate>
                     <input type="hidden" name="intent" value={intent} />
                     <div className="space-y-2">
-                        <Label htmlFor="email">Work email</Label>
+                        <Label htmlFor="email">Email</Label>
                         <Input
                             id="email"
                             name="email"
@@ -111,9 +111,8 @@ export function AuthForm() {
                 <Separator />
 
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                    This is a passwordless flow powered by Supabase. The same link lets you finish
-                    signing {intent === 'signin' ? 'in' : 'up'} from any device, and it expires in
-                    24 hours for your safety.
+                    We send a one-tap link so you can finish signing {intent === 'signin' ? 'in' : 'up'} on
+                    any device. It stays active for 24 hours to keep the community safe.
                 </p>
             </CardContent>
         </Card>

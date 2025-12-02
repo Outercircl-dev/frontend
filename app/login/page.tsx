@@ -1,11 +1,14 @@
+import Image from 'next/image'
 import type { Metadata } from 'next'
 
 import { AuthForm } from '@/components/auth/auth-form'
 import { LoginFeatureList } from '@/components/auth/login-feature-list'
+import { LoginSampleEvents } from '@/components/auth/login-sample-events'
+import { RotatingActivityTitle } from '@/components/auth/rotating-activity-title'
 
 export const metadata: Metadata = {
     title: 'OuterCircl · Login',
-    description: 'Passwordless login with Supabase magic links and secure proxy sessions.',
+    description: 'Join local adventures with neighbors and trusted hosts.',
 }
 
 export default function LoginPage() {
@@ -13,26 +16,31 @@ export default function LoginPage() {
         <div className="grid min-h-screen bg-muted/40 lg:grid-cols-[1.05fr_0.95fr]">
             <section className="flex flex-col gap-10 px-8 py-16 lg:px-14">
                 <div className="space-y-6">
-                    <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1 text-xs font-semibold uppercase tracking-[0.35em] text-primary">
-                        Secure Access
-                    </span>
-                    <div className="space-y-4">
-                        <h1 className="text-4xl font-semibold leading-tight text-foreground sm:text-5xl">
-                            Login to OuterCircl with a single verified email.
-                        </h1>
-                        <p className="text-base text-muted-foreground sm:text-lg">
-                            Inspired by the shadcn
-                            <span className="font-semibold"> login-05</span> block and tailored for
-                            Supabase magic links. The proxy will keep guests here until their email
-                            session is confirmed.
-                        </p>
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div className="space-y-5">
+                            <Image
+                                src="/logo.png"
+                                alt="OuterCircl"
+                                width={140}
+                                height={40}
+                                className="h-10 w-auto"
+                                priority
+                            />
+                            <RotatingActivityTitle />
+                        </div>
                     </div>
+                    <p className="text-base text-muted-foreground sm:text-lg">
+                        Our homepage spotlights real groups every week—cold plunges, coffee chats,
+                        toddler meetups, and more. Sign in to RSVP without missing the next invite.
+                    </p>
                 </div>
 
-                <LoginFeatureList />
+                {/* <LoginFeatureList /> */}
+
+                <LoginSampleEvents />
 
                 <div className="mt-auto space-y-2 text-sm text-muted-foreground">
-                    <p>Need SSO? It layers on top of the same Supabase client.</p>
+                    <p>New here? Bring a friend along and grow your circle faster.</p>
                     <p>
                         Having issues?{' '}
                         <a
@@ -46,12 +54,12 @@ export default function LoginPage() {
                 </div>
             </section>
             <section className="relative flex items-center justify-center bg-background px-6 py-12">
-                <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 via-background to-background" />
+                <div className="absolute inset-0 -z-10 bg-linear-to-b from-primary/5 via-background to-background" />
                 <div className="w-full max-w-md space-y-6">
                     <AuthForm />
                     <p className="text-center text-sm text-muted-foreground">
-                        By continuing you agree to the OuterCircl privacy policy and security
-                        controls.
+                        By continuing you agree to the OuterCircl community guidelines and privacy
+                        promise.
                     </p>
                 </div>
             </section>

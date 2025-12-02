@@ -5,17 +5,17 @@ import { Card, CardContent } from '@/components/ui/card'
 const FEATURES = [
     {
         title: 'Magic links only',
-        description: 'Verify once with Supabase OTP emails and skip passwords entirely.',
+        description: 'Verify once with secure invites and skip passwords entirely.',
         icon: MailCheck,
     },
     {
         title: 'Session aware proxy',
-        description: 'Next.js middleware keeps users on /login until Supabase marks them verified.',
+        description: 'Our guardrails keep you on /login until your invite is confirmed.',
         icon: ShieldCheck,
     },
     {
-        title: 'Team friendly rollout',
-        description: 'New teammates can self-serve access without waiting for manual invites.',
+        title: 'Friend-friendly rollout',
+        description: 'New members can self-serve access without waiting for manual approval.',
         icon: Sparkles,
     },
 ]
