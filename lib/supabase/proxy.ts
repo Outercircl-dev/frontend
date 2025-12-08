@@ -1,6 +1,24 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 
+const PROTECTED_ROUTES = ["/feed", "/settings", "/activities", "/profile"];
+const AUTH_ROUTES = ["/login", "/"];
+const PUBLIC_ROUTES = ["/auth/callback", "/onboarding"];
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL
+
+if (!API_URL) {
+    throw new Error('NEXT_PUBLIC_API_URL is not set')
+}
+
+interface MeResponse {
+    id: string
+    supabaseUserId: string
+    email: string
+    hasOnboarded: boolean
+    role: string
+}
+
 export async function updateSession(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
         request,
@@ -31,17 +49,35 @@ export async function updateSession(request: NextRequest) {
     // IMPORTANT: If you remove getClaims() and you use server-side rendering
     // with the Supabase client, your users may be randomly logged out.
     const { data } = await supabase.auth.getClaims()
-    const user = data?.claims
-    if (
-        !user &&
-        !request.nextUrl.pathname.startsWith('/login') &&
-        !request.nextUrl.pathname.startsWith('/auth')
-    ) {
-        // no user, potentially respond by redirecting the user to the login page
+    console.log('[PROXY] - Supabase Claims Info:', data)
+    const hasSession = Boolean(data?.claims)
+
+    const pathname = request.nextUrl.pathname
+    const searchParams = request.nextUrl.searchParams
+
+    // Handle magic link code - redirect to auth/callback if code exists on any route
+    const code = searchParams.get('code')
+    if (code && pathname !== '/auth/callback') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/auth/callback'
+        // Keep the code parameter
+        return NextResponse.redirect(url)
+    }
+
+    const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route))
+    if (isPublicRoute) {
+        return supabaseResponse
+    }
+
+    const isAuthRoute = AUTH_ROUTES.includes(pathname)
+    const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route))
+
+    if (!hasSession && isProtectedRoute) {
         const url = request.nextUrl.clone()
         url.pathname = '/login'
         return NextResponse.redirect(url)
     }
+
     // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
     // creating a new response object with NextResponse.next() make sure to:
     // 1. Pass the request in it, like so:
