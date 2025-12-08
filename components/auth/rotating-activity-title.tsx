@@ -45,8 +45,8 @@ export function RotatingActivityTitle() {
                         }
                     }}
                 >
-                    {phrases.map((phrase) => (
-                        <span key={phrase} className="min-w-full text-left">
+                    {phrases.map((phrase, index) => (
+                        <span key={`${phrase}-${index}`} className="min-w-full text-left">
                             {phrase}
                         </span>
                     ))}
