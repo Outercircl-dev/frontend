@@ -1,9 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 
-const PROTECTED_ROUTES = ["/feed", "/settings", "/activities", "/profile"];
+const PROTECTED_ROUTES = ["/feed", "/settings", "/activities", "/profile", "/onboarding"];
 const AUTH_ROUTES = ["/login", "/"];
-const PUBLIC_ROUTES = ["/auth/callback", "/onboarding"];
+const PUBLIC_ROUTES = ["/auth/callback"];
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
