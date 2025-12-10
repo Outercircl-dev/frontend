@@ -1,8 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
+import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 import { getRedirectUrlForState, getUserAuthState } from '@/lib/auth-state-machine';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+/**
+ * Backend /me response shape
+ */
+interface BackendMeResponse {
+  id: string;
+  supabaseUserId: string;
+  email: string;
+  hasOnboarded: boolean;
+  role: string;
+}
+
+/**
+ * Response shape for frontend consumption
+ */
 interface AuthMeResponse {
   state: string;
   redirectUrl: string;
@@ -11,73 +26,108 @@ interface AuthMeResponse {
     email: string;
     supabaseUserId: string;
   };
-  profile?: {
+  profile: {
     emailVerified: boolean;
     profileCompleted: boolean;
   };
 }
 
-export async function GET(request: NextRequest) {
+/**
+ * GET /api/v1/auth/me
+ * 
+ * Proxies to NestJS backend /me endpoint.
+ * 
+ * Architecture:
+ * 1. Get Supabase session from cookies
+ * 2. Extract access token
+ * 3. Call backend /me with Bearer token
+ * 4. Map backend response to frontend auth state
+ * 
+ * Note: emailVerified comes from Supabase user metadata,
+ * hasOnboarded (profileCompleted) comes from backend.
+ */
+export async function GET() {
   try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader) {
+    // 1. Get Supabase client (uses cookies)
+    const supabase = await createClient();
+
+    // 2. Get current session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError || !session) {
       return NextResponse.json(
-        { error: 'Unauthorized', message: 'No auth header' },
+        { error: 'Unauthorized', message: 'No valid session' },
         { status: 401 }
       );
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const accessToken = session.access_token;
+    const user = session.user;
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    // 3. Get email_verified from Supabase user
+    // Supabase stores this in user metadata when email is confirmed
+    const emailVerified = user.email_confirmed_at !== null;
 
-    if (authError || !user) {
+    // 4. Call backend /me endpoint with Bearer token
+    if (!API_URL) {
+      console.error('NEXT_PUBLIC_API_URL is not configured');
       return NextResponse.json(
-        { error: 'Unauthorized', message: 'Invalid token' },
-        { status: 401 }
-      );
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('supabase_user_id', user.id)
-      .single();
-
-    if (profileError && profileError.code !== 'PGRST116') {
-      // PGRST116 = not found (new users) — treat as no profile
-      console.error('Profile error:', profileError);
-      return NextResponse.json(
-        { error: 'Internal Server Error' },
+        { error: 'Internal Server Error', message: 'Backend URL not configured' },
         { status: 500 }
       );
     }
 
-    const state = getUserAuthState(
-      profile?.email_verified ?? false,
-      profile?.profile_completed ?? false
-    );
+    const backendResponse = await fetch(`${API_URL}/me`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!backendResponse.ok) {
+      const errorText = await backendResponse.text();
+      console.error('Backend /me error:', backendResponse.status, errorText);
+      
+      if (backendResponse.status === 401) {
+        return NextResponse.json(
+          { error: 'Unauthorized', message: 'Backend authentication failed' },
+          { status: 401 }
+        );
+      }
+      
+      return NextResponse.json(
+        { error: 'Internal Server Error', message: 'Backend request failed' },
+        { status: 500 }
+      );
+    }
+
+    const backendData: BackendMeResponse = await backendResponse.json();
+
+    // 5. Map backend hasOnboarded to our profileCompleted
+    const profileCompleted = backendData.hasOnboarded;
+
+    // 6. Determine auth state using state machine
+    const state = getUserAuthState(emailVerified, profileCompleted);
     const redirectUrl = getRedirectUrlForState(state);
 
+    // 7. Build response
     const response: AuthMeResponse = {
       state,
       redirectUrl,
       user: {
-        id: user.id,
-        email: user.email || '',
-        supabaseUserId: user.id,
+        id: backendData.id,
+        email: backendData.email,
+        supabaseUserId: backendData.supabaseUserId,
       },
       profile: {
-        emailVerified: profile?.email_verified ?? false,
-        profileCompleted: profile?.profile_completed ?? false,
+        emailVerified,
+        profileCompleted,
       },
     };
 
     return NextResponse.json(response, { status: 200 });
+
   } catch (error) {
     console.error('Error in GET /api/v1/auth/me:', error);
     return NextResponse.json(
@@ -86,4 +136,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
