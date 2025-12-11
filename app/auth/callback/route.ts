@@ -101,12 +101,14 @@ export async function GET(request: NextRequest) {
   }
 
   // Create final redirect response and copy session cookies to it
+  // IMPORTANT: Preserve original cookie options from Supabase SSR
+  // DO NOT set httpOnly: true - the browser client needs to read these cookies
   const finalResponse = NextResponse.redirect(redirectUrl)
   
   tempResponse.cookies.getAll().forEach((cookie) => {
+    // Copy cookie with its original options (not overriding with httpOnly)
     finalResponse.cookies.set(cookie.name, cookie.value, {
       path: '/',
-      httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 1 week
