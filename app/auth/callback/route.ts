@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
 
 /**
  * Backend /me response shape
@@ -28,15 +29,16 @@ interface BackendMeResponse {
  * 5. Set cookies and redirect
  */
 export async function GET(request: NextRequest) {
+  const origin = SITE_URL || request.nextUrl.origin
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
 
   if (!code) {
-    return NextResponse.redirect(new URL('/login?error=missing_code', request.url))
+    return NextResponse.redirect(new URL('/login?error=missing_code', origin))
   }
 
   // Default redirect destination
-  let redirectUrl = new URL('/onboarding/profile', request.url)
+  let redirectUrl = new URL('/onboarding/profile', origin)
 
   // Create temporary response to capture cookies during session exchange
   const tempResponse = NextResponse.next()
@@ -63,11 +65,12 @@ export async function GET(request: NextRequest) {
   const { error, data } = await supabase.auth.exchangeCodeForSession(code)
 
   if (error) {
-    return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error.message)}`, request.url))
+    return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error.message)}`, origin))
   }
 
   // Get access token from session
   const accessToken = data.session?.access_token
+  console.log('############## Session Token ##############', accessToken)
 
   if (accessToken && API_URL) {
     try {
@@ -82,10 +85,11 @@ export async function GET(request: NextRequest) {
 
       if (backendResponse.ok) {
         const userData: BackendMeResponse = await backendResponse.json();
-        
+        console.log('########## BE Response #################', userData)
+
         // Determine redirect based on hasOnboarded from backend
         if (userData.hasOnboarded) {
-          redirectUrl = new URL('/feed', request.url)
+          redirectUrl = new URL('/feed', origin)
         }
         // else: stay with default /onboarding/profile
       } else {
@@ -104,7 +108,7 @@ export async function GET(request: NextRequest) {
   // IMPORTANT: Preserve original cookie options from Supabase SSR
   // DO NOT set httpOnly: true - the browser client needs to read these cookies
   const finalResponse = NextResponse.redirect(redirectUrl)
-  
+
   tempResponse.cookies.getAll().forEach((cookie) => {
     // Copy cookie with its original options (not overriding with httpOnly)
     finalResponse.cookies.set(cookie.name, cookie.value, {
