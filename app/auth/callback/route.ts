@@ -1,6 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+/**
+ * Backend /me response shape
+ */
+interface BackendMeResponse {
+  id: string;
+  supabaseUserId: string;
+  email: string;
+  hasOnboarded: boolean;
+  role: string;
+  type?: string;
+}
+
+/**
+ * GET /auth/callback
+ * 
+ * Handles magic link callback after user clicks email link.
+ * 
+ * Flow:
+ * 1. Exchange code for session (Supabase)
+ * 2. Get access token from session
+ * 3. Call backend /me to get user info (per architect: no direct DB queries)
+ * 4. Determine redirect based on hasOnboarded
+ * 5. Set cookies and redirect
+ */
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
@@ -39,21 +65,39 @@ export async function GET(request: NextRequest) {
   if (error) {
     return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error.message)}`, request.url))
   }
-  console.log('data', data.session)
 
-  // Check if user has completed profile to determine redirect
-  const { data: { user } } = await supabase.auth.getUser()
+  // Get access token from session
+  const accessToken = data.session?.access_token
 
-  if (user) {
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('profile_completed')
-      .eq('user_id', user.id)
-      .single()
+  if (accessToken && API_URL) {
+    try {
+      // Call backend /me to get user info (per architect review)
+      const backendResponse = await fetch(`${API_URL}/me`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-    if (!profileError && profile?.profile_completed) {
-      redirectUrl = new URL('/feed', request.url)
+      if (backendResponse.ok) {
+        const userData: BackendMeResponse = await backendResponse.json();
+        
+        // Determine redirect based on hasOnboarded from backend
+        if (userData.hasOnboarded) {
+          redirectUrl = new URL('/feed', request.url)
+        }
+        // else: stay with default /onboarding/profile
+      } else {
+        console.error('Backend /me failed in callback:', backendResponse.status);
+        // On backend error, default to onboarding (safe fallback)
+      }
+    } catch (err) {
+      console.error('Error calling backend /me in callback:', err);
+      // On error, default to onboarding (safe fallback)
     }
+  } else {
+    console.warn('No access token or API_URL, defaulting to onboarding');
   }
 
   // Create final redirect response and copy session cookies to it
@@ -71,4 +115,3 @@ export async function GET(request: NextRequest) {
 
   return finalResponse
 }
-
