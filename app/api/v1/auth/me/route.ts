@@ -5,6 +5,14 @@ import { getRedirectUrlForState, getUserAuthState } from '@/lib/auth-state-machi
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 /**
+ * Subscription tier enum - matches backend SubscriptionTier
+ */
+export enum SubscriptionTier {
+  FREEMIUM = 'FREEMIUM',
+  PREMIUM = 'PREMIUM',
+}
+
+/**
  * Backend /me response shape
  */
 interface BackendMeResponse {
@@ -13,6 +21,7 @@ interface BackendMeResponse {
   email: string;
   hasOnboarded: boolean;
   role: string;
+  type: SubscriptionTier;
 }
 
 /**
@@ -25,6 +34,7 @@ interface AuthMeResponse {
     id: string;
     email: string;
     supabaseUserId: string;
+    type: SubscriptionTier;
   };
   profile: {
     emailVerified: boolean;
@@ -119,6 +129,7 @@ export async function GET() {
         id: backendData.id,
         email: backendData.email,
         supabaseUserId: backendData.supabaseUserId,
+        type: backendData.type ?? SubscriptionTier.FREEMIUM,
       },
       profile: {
         emailVerified,
