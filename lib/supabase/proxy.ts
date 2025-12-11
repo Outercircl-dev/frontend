@@ -6,6 +6,7 @@ const AUTH_ROUTES = ["/login", "/"];
 const PUBLIC_ROUTES = ["/auth/callback"];
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')
 
 if (!API_URL) {
     throw new Error('NEXT_PUBLIC_API_URL is not set')
@@ -20,11 +21,21 @@ interface MeResponse {
 }
 
 function getOrigin(request: NextRequest) {
+    if (SITE_URL) return SITE_URL
+
     const forwardedHost = request.headers.get('x-forwarded-host')
     const forwardedProto = request.headers.get('x-forwarded-proto')
+    const host = request.headers.get('host')
+
     if (forwardedHost && forwardedProto) {
         return `${forwardedProto}://${forwardedHost}`
     }
+
+    if (host) {
+        const protocol = forwardedProto || request.nextUrl.protocol.replace(':', '')
+        return `${protocol}://${host}`
+    }
+
     return request.nextUrl.origin
 }
 
