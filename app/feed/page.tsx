@@ -10,6 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 
+export const dynamic = 'force-dynamic'
+
 // Fallback interests mapping for display
 const INTEREST_DISPLAY: Record<string, { name: string; icon: string }> = {
   running: { name: 'Running', icon: '🏃' },
