@@ -19,6 +19,15 @@ interface MeResponse {
     role: string
 }
 
+function getOrigin(request: NextRequest) {
+    const forwardedHost = request.headers.get('x-forwarded-host')
+    const forwardedProto = request.headers.get('x-forwarded-proto')
+    if (forwardedHost && forwardedProto) {
+        return `${forwardedProto}://${forwardedHost}`
+    }
+    return request.nextUrl.origin
+}
+
 export async function updateSession(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
         request,
@@ -54,13 +63,13 @@ export async function updateSession(request: NextRequest) {
 
     const pathname = request.nextUrl.pathname
     const searchParams = request.nextUrl.searchParams
+    const origin = getOrigin(request)
 
     // Handle magic link code - redirect to auth/callback if code exists on any route
     const code = searchParams.get('code')
     if (code && pathname !== '/auth/callback') {
-        const url = request.nextUrl.clone()
-        url.pathname = '/auth/callback'
-        // Keep the code parameter
+        const url = new URL('/auth/callback', origin)
+        url.search = request.nextUrl.search
         return NextResponse.redirect(url)
     }
 
@@ -73,8 +82,7 @@ export async function updateSession(request: NextRequest) {
     const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route))
 
     if (!hasSession && isProtectedRoute) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/login'
+        const url = new URL('/login', origin)
         return NextResponse.redirect(url)
     }
 
