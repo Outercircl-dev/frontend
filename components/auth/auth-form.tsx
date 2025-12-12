@@ -1,18 +1,14 @@
 'use client'
 
-import { useActionState, useEffect, useRef, useState } from 'react'
-
-import {
-    verifyEmailAction,
-    verifyEmailInitialState,
-    type VerifyEmailState,
-} from '@/actions/auth/auth'
+import { useEffect, useRef, useState } from 'react'
+import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 
 type Intent = 'signin' | 'signup'
 
@@ -24,18 +20,75 @@ const INTENT_OPTIONS: { value: Intent; label: string; description: string }[] = 
 export function AuthForm() {
     const [intent, setIntent] = useState<Intent>('signin')
     const formRef = useRef<HTMLFormElement>(null)
-    const [state, formAction] = useActionState<VerifyEmailState, FormData>(
-        verifyEmailAction,
-        verifyEmailInitialState
-    )
+    const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+    const [message, setMessage] = useState<string | null>(null)
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     useEffect(() => {
-        if (state.status === 'success') {
+        if (status === 'success') {
             formRef.current?.reset()
         }
-    }, [state.status])
+    }, [status])
 
     const submitLabel = intent === 'signin' ? 'Send sign-in link' : 'Create account'
+
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault()
+        const formData = new FormData(event.currentTarget)
+        const email = String(formData.get('email') ?? '').trim()
+
+        const validation = verifyEmailSchema.safeParse({ email })
+
+        if (!validation.success) {
+            setStatus('error')
+            setMessage(validation.error.issues[0]?.message ?? 'Please enter a valid email.')
+            return
+        }
+
+        const supabase = createClient()
+        const redirectTo = getAuthRedirectUrl()
+
+        try {
+            setIsSubmitting(true)
+            setStatus('loading')
+            setMessage('Sending your secure link…')
+
+            const { error } = await supabase.auth.signInWithOtp({
+                email,
+                options: {
+                    shouldCreateUser: true,
+                    emailRedirectTo: redirectTo,
+                },
+            })
+
+            if (error) {
+                if (error.message.includes('rate limit')) {
+                    throw new Error('Too many requests. Please wait a moment and try again.')
+                }
+                if (error.message.includes('not allowed')) {
+                    throw new Error('Unable to send magic link. Please try again or contact support.')
+                }
+                throw new Error(error.message)
+            }
+
+            setStatus('success')
+            setMessage(
+                intent === 'signup'
+                    ? 'Check your inbox to finish creating your account.'
+                    : 'Check your inbox for your secure sign-in link.'
+            )
+        } catch (err) {
+            console.error('Auth magic-link error:', err)
+            setStatus('error')
+            setMessage(
+                err instanceof Error
+                    ? err.message
+                    : 'An unexpected error occurred. Please try again.'
+            )
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
 
     return (
         <Card className="border-none bg-card/80 shadow-xl shadow-black/5 backdrop-blur">
@@ -75,7 +128,7 @@ export function AuthForm() {
                     })}
                 </div>
 
-                <form ref={formRef} action={formAction} className="space-y-4" noValidate>
+                <form ref={formRef} onSubmit={handleSubmit} className="space-y-4" noValidate>
                     <input type="hidden" name="intent" value={intent} />
                     <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
@@ -88,23 +141,23 @@ export function AuthForm() {
                             required
                         />
                     </div>
-                    <Button type="submit" className="w-full">
+                    <Button type="submit" className="w-full" disabled={isSubmitting}>
                         {submitLabel}
                     </Button>
                 </form>
 
-                {state.status !== 'idle' && state.message ? (
+                {status !== 'idle' && message ? (
                     <div
                         role="status"
                         aria-live="polite"
                         className={cn(
                             'rounded-xl border px-4 py-3 text-sm',
-                            state.status === 'success'
+                            status === 'success'
                                 ? 'border-emerald-200/70 bg-emerald-50 text-emerald-600'
                                 : 'border-red-200/70 bg-red-50 text-red-600'
                         )}
                     >
-                        {state.message}
+                        {message}
                     </div>
                 ) : null}
 
@@ -117,5 +170,19 @@ export function AuthForm() {
             </CardContent>
         </Card>
     )
+}
+
+const verifyEmailSchema = z.object({
+    email: z.string().email('Please use a valid email address'),
+})
+
+function getAuthRedirectUrl() {
+    if (process.env.NEXT_PUBLIC_SITE_URL) {
+        return `${process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')}/auth/callback`
+    }
+    if (typeof window !== 'undefined') {
+        return `${window.location.origin}/auth/callback`
+    }
+    return 'http://localhost:3000/auth/callback'
 }
 
