@@ -1,6 +1,7 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
+import { createServerActionClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { completeProfileSchema } from '@/lib/validations/profile'
@@ -10,7 +11,7 @@ export async function completeProfileAction(
   _prevState: ProfileFormState,
   formData: FormData
 ): Promise<ProfileFormState> {
-  const supabase = await createClient()
+  const supabase = createServerActionClient(await cookies())
 
   // Get current user
   const {
@@ -99,7 +100,7 @@ export async function saveProfileStepAction(
   step: number,
   data: Record<string, unknown>
 ): Promise<ProfileFormState> {
-  const supabase = await createClient()
+  const supabase = createServerActionClient(await cookies())
 
   const {
     data: { user },

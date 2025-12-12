@@ -3,7 +3,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { CalendarDays, MapPin, Settings, LogOut, CheckCircle, User, Calendar, Heart } from 'lucide-react'
 
-import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
+import { createServerActionClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -48,7 +49,7 @@ const INTEREST_DISPLAY: Record<string, { name: string; icon: string }> = {
 }
 
 export default async function FeedPage() {
-  const supabase = await createClient()
+  const supabase = createServerActionClient(await cookies())
 
   // Get current user
   const {

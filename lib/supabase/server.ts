@@ -1,52 +1,40 @@
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import type { NextRequest, NextResponse } from "next/server";
 
-export async function createClient() {
-    let cookieStore: Awaited<ReturnType<typeof cookies>> | null = null
+type CookieAdapter = NonNullable<Parameters<typeof createServerClient>[2]>["cookies"];
+// Explicit cookie shape to avoid optional setAll typing issues in @supabase/ssr
+export type SupabaseCookie = { name: string; value: string; options?: Parameters<NextResponse['cookies']['set']>[2] };
 
-    try {
-        // cookies() throws if there is no active request context (e.g., certain AWS edge paths)
-        cookieStore = await cookies()
-    } catch (error) {
-        console.error('SUPABASE_SERVER_CLIENT: cookies() unavailable; proceeding without request cookie store', error)
-    }
-
-    if (cookieStore) {
-        const store = cookieStore
-        return createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-            {
-                cookies: {
-                    getAll() {
-                        return store.getAll()
-                    },
-                    setAll(cookiesToSet) {
-                        try {
-                            cookiesToSet.forEach(({ name, value, options }) => store.set(name, value, options))
-                        } catch (error) {
-                            console.error('SUPABASE_SERVER_CLIENT: cookies set in server. Please use NextJS Proxy to refresh', error)
-                        }
-                    }
-                }
-            }
-        )
-    }
-
-    // Fallback for environments where request cookies aren't available; we still return a client
-    // for non-session flows (e.g., sign-in with email) without persisting cookies.
+export function createClient(cookieAdapter: CookieAdapter) {
     return createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
         {
-            cookies: {
-                getAll() {
-                    return []
-                },
-                setAll() {
-                    // no-op
-                }
-            }
+            cookies: cookieAdapter,
         }
-    )
+    );
+}
+
+export function createRouteHandlerClient(request: NextRequest, response: NextResponse) {
+    return createClient({
+        getAll() {
+            return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+                response.cookies.set(name, value, options)
+            );
+        },
+    });
+}
+
+export function createServerActionClient(cookieStore: { getAll: () => any; set: (name: string, value: string, options?: SupabaseCookie["options"]) => void }) {
+    return createClient({
+        getAll() {
+            return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+        },
+    });
 }

@@ -1,6 +1,7 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
+import { createServerActionClient } from '@/lib/supabase/server'
 import type { Interest, InterestCategory } from '@/lib/types/profile'
 
 export interface GetInterestsResult {
@@ -65,7 +66,8 @@ function groupInterestsByCategory(interests: Interest[]): InterestCategory[] {
 
 export async function getInterestsAction(): Promise<GetInterestsResult> {
   try {
-    const supabase = await createClient()
+    const cookieStore = await cookies()
+    const supabase = createServerActionClient(cookieStore)
 
     const { data, error } = await supabase
       .from('interests')

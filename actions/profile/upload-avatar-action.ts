@@ -1,6 +1,7 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
+import { createServerActionClient } from '@/lib/supabase/server'
 
 export interface UploadAvatarResult {
   url: string | null
@@ -8,7 +9,7 @@ export interface UploadAvatarResult {
 }
 
 export async function uploadAvatarAction(formData: FormData): Promise<UploadAvatarResult> {
-  const supabase = await createClient()
+  const supabase = createServerActionClient(await cookies())
 
   // Get current user
   const {
@@ -80,7 +81,7 @@ export async function uploadAvatarAction(formData: FormData): Promise<UploadAvat
 }
 
 export async function deleteAvatarAction(): Promise<{ success: boolean; error: string | null }> {
-  const supabase = await createClient()
+  const supabase = createServerActionClient(await cookies())
 
   const {
     data: { user },
