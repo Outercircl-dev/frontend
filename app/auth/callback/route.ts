@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
+import { createRouteHandlerClient } from '@/lib/supabase/server'
+
+export const dynamic = 'force-dynamic'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
@@ -29,7 +31,7 @@ interface BackendMeResponse {
  * 5. Set cookies and redirect
  */
 export async function GET(request: NextRequest) {
-  const origin = SITE_URL
+  const origin = SITE_URL ?? request.nextUrl.origin
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
   console.log("callback cookies:", request.cookies.getAll().map((c: { name: any; }) => c.name));
@@ -38,29 +40,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=missing_code', origin))
   }
 
-  // Default redirect destination
+  // Default redirect destination and response used for cookie writes
   let redirectUrl = new URL('/onboarding/profile', origin)
+  const response = NextResponse.redirect(redirectUrl, { status: 302 })
 
-  // Create temporary response to capture cookies during session exchange
-  const tempResponse = NextResponse.next()
-
-  // Create Supabase client that sets cookies on tempResponse
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            tempResponse.cookies.set(name, value, options)
-          })
-        },
-      },
-    }
-  )
+  // Create Supabase client bound to the current request/response cookies
+  const supabase = createRouteHandlerClient(request, response)
 
   // Exchange the code for a session
   const { error, data } = await supabase.auth.exchangeCodeForSession(code)
@@ -71,7 +56,6 @@ export async function GET(request: NextRequest) {
 
   // Get access token from session
   const accessToken = data.session?.access_token
-  console.log('############## Session Token ##############', accessToken)
 
   if (accessToken && API_URL) {
     try {
@@ -105,10 +89,7 @@ export async function GET(request: NextRequest) {
     console.warn('No access token or API_URL, defaulting to onboarding');
   }
 
-  // Create final redirect response and copy session cookies to it
-  // IMPORTANT: Preserve original cookie options from Supabase SSR
-  // DO NOT set httpOnly: true - the browser client needs to read these cookies
-  const finalResponse = NextResponse.redirect(redirectUrl)
-
-  return finalResponse
+  // Update redirect target on the existing response so Supabase-set cookies remain attached
+  response.headers.set('Location', redirectUrl.toString())
+  return response
 }

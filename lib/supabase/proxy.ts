@@ -1,5 +1,6 @@
-import { createServerClient } from "@supabase/ssr";
+import { createClient } from "./server";
 import { NextRequest, NextResponse } from "next/server";
+type ResponseCookie = { name: string; value: string; options?: Parameters<NextResponse['cookies']['set']>[2] };
 
 const PROTECTED_ROUTES = ["/feed", "/settings", "/activities", "/profile", "/onboarding"];
 const AUTH_ROUTES = ["/login", "/"];
@@ -40,28 +41,20 @@ function getOrigin(request: NextRequest) {
 }
 
 export async function updateSession(request: NextRequest) {
-    let supabaseResponse = NextResponse.next({
-        request,
-    })
+    const supabaseResponse = NextResponse.next({ request });
+    const pendingCookies: ResponseCookie[] = [];
 
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-        {
-            cookies: {
-                getAll() {
-                    return request.cookies.getAll()
-                },
-                setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-                    supabaseResponse = NextResponse.next({
-                        request,
-                    })
-                    cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
-                }
-            }
-        }
-    )
+    const supabase = createClient({
+        getAll() {
+            return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+                supabaseResponse.cookies.set(name, value, options);
+                pendingCookies.push({ name, value, options });
+            });
+        },
+    });
 
     // Do not run code between createServerClient and
     // supabase.auth.getClaims(). A simple mistake could make it very hard to debug
@@ -81,7 +74,9 @@ export async function updateSession(request: NextRequest) {
     if (code && pathname !== '/auth/callback') {
         const url = new URL('/auth/callback', origin)
         url.search = request.nextUrl.search
-        return NextResponse.redirect(url)
+        const redirectResponse = NextResponse.redirect(url)
+        pendingCookies.forEach(({ name, value, options }) => redirectResponse.cookies.set(name, value, options))
+        return redirectResponse
     }
 
     const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route))
@@ -94,7 +89,9 @@ export async function updateSession(request: NextRequest) {
 
     if (!hasSession && isProtectedRoute) {
         const url = new URL('/login', origin)
-        return NextResponse.redirect(url)
+        const redirectResponse = NextResponse.redirect(url)
+        pendingCookies.forEach(({ name, value, options }) => redirectResponse.cookies.set(name, value, options))
+        return redirectResponse
     }
 
     // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're

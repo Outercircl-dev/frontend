@@ -1,6 +1,7 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
+import { createServerActionClient } from '@/lib/supabase/server'
 import type { UserProfile } from '@/lib/types/profile'
 
 export interface GetProfileResult {
@@ -9,7 +10,8 @@ export interface GetProfileResult {
 }
 
 export async function getProfileAction(): Promise<GetProfileResult> {
-  const supabase = await createClient()
+  const cookieStore = await cookies()
+  const supabase = createServerActionClient(cookieStore)
 
   // Get current user
   const {
