@@ -29,9 +29,10 @@ interface BackendMeResponse {
  * 5. Set cookies and redirect
  */
 export async function GET(request: NextRequest) {
-  const origin = SITE_URL || request.nextUrl.origin
+  const origin = SITE_URL
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
+  console.log("callback cookies:", request.cookies.getAll().map((c: { name: any; }) => c.name));
 
   if (!code) {
     return NextResponse.redirect(new URL('/login?error=missing_code', origin))
@@ -108,16 +109,6 @@ export async function GET(request: NextRequest) {
   // IMPORTANT: Preserve original cookie options from Supabase SSR
   // DO NOT set httpOnly: true - the browser client needs to read these cookies
   const finalResponse = NextResponse.redirect(redirectUrl)
-
-  tempResponse.cookies.getAll().forEach((cookie) => {
-    // Copy cookie with its original options (not overriding with httpOnly)
-    finalResponse.cookies.set(cookie.name, cookie.value, {
-      path: '/',
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 1 week
-    })
-  })
 
   return finalResponse
 }
