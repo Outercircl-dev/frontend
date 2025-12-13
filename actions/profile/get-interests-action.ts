@@ -1,7 +1,6 @@
 'use server'
 
 import { cookies } from 'next/headers'
-import { createServerActionClient } from '@/lib/supabase/server'
 import type { Interest, InterestCategory } from '@/lib/types/profile'
 
 export interface GetInterestsResult {
