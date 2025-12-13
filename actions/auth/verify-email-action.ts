@@ -1,7 +1,7 @@
 'use server'
 
 import { cookies } from 'next/headers'
-import { createServerActionClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 
 import type { VerifyEmailState } from './state'
@@ -38,9 +38,7 @@ export async function verifyEmailAction(
                 message,
             }
         }
-        const cookieStore = await cookies();
-
-        const supabase = createServerActionClient(cookieStore)
+        const supabase = await createClient()
         const { email, intent } = parsed.data
         const redirectTo = `${getBaseUrl()}/auth/callback`
 

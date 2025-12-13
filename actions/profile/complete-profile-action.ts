@@ -1,7 +1,6 @@
 'use server'
 
 import { cookies } from 'next/headers'
-import { createServerActionClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { completeProfileSchema } from '@/lib/validations/profile'
@@ -11,17 +10,17 @@ export async function completeProfileAction(
   _prevState: ProfileFormState,
   formData: FormData
 ): Promise<ProfileFormState> {
-  const supabase = createServerActionClient(await cookies())
+  // const supabase = createServerActionClient(await cookies())
 
   // Get current user
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
+  // const {
+  //   data: { user },
+  //   error: authError,
+  // } = await supabase.auth.getUser()
 
-  if (authError || !user) {
-    return { status: 'error', message: 'You must be logged in to complete your profile' }
-  }
+  // if (authError || !user) {
+  //   return { status: 'error', message: 'You must be logged in to complete your profile' }
+  // }
 
   // Parse form data
   const rawData = {
@@ -60,36 +59,36 @@ export async function completeProfileAction(
   const profilePictureUrl = formData.get('profilePictureUrl') as string | null
 
   // Upsert profile
-  const { error: dbError } = await supabase.from('user_profiles').upsert(
-    {
-      user_id: user.id,
-      full_name: parsed.data.fullName,
-      date_of_birth: parsed.data.dateOfBirth,
-      gender: parsed.data.gender,
-      profile_picture_url: profilePictureUrl || null,
-      bio: parsed.data.bio || null,
-      interests: parsed.data.interests,
-      hobbies: parsed.data.hobbies || [],
-      availability: parsed.data.availability || {},
-      distance_radius_km: parsed.data.distanceRadiusKm,
-      accepted_tos: true,
-      accepted_guidelines: true,
-      accepted_tos_at: new Date().toISOString(),
-      accepted_guidelines_at: new Date().toISOString(),
-      profile_completed: true,
-    },
-    {
-      onConflict: 'user_id',
-    }
-  )
+  // const { error: dbError } = await supabase.from('user_profiles').upsert(
+  //   {
+  //     user_id: user.id,
+  //     full_name: parsed.data.fullName,
+  //     date_of_birth: parsed.data.dateOfBirth,
+  //     gender: parsed.data.gender,
+  //     profile_picture_url: profilePictureUrl || null,
+  //     bio: parsed.data.bio || null,
+  //     interests: parsed.data.interests,
+  //     hobbies: parsed.data.hobbies || [],
+  //     availability: parsed.data.availability || {},
+  //     distance_radius_km: parsed.data.distanceRadiusKm,
+  //     accepted_tos: true,
+  //     accepted_guidelines: true,
+  //     accepted_tos_at: new Date().toISOString(),
+  //     accepted_guidelines_at: new Date().toISOString(),
+  //     profile_completed: true,
+  //   },
+  //   {
+  //     onConflict: 'user_id',
+  //   }
+  // )
 
-  if (dbError) {
-    console.error('Profile save error:', dbError)
-    return {
-      status: 'error',
-      message: 'Failed to save profile. Please try again.',
-    }
-  }
+  // if (dbError) {
+  //   console.error('Profile save error:', dbError)
+  //   return {
+  //     status: 'error',
+  //     message: 'Failed to save profile. Please try again.',
+  //   }
+  // }
 
   revalidatePath('/feed')
   redirect('/feed')
@@ -100,17 +99,17 @@ export async function saveProfileStepAction(
   step: number,
   data: Record<string, unknown>
 ): Promise<ProfileFormState> {
-  const supabase = createServerActionClient(await cookies())
+  // const supabase = createServerActionClient(await cookies())
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
+  // const {
+  //   data: { user },
+  //   error: authError,
+  // } = await supabase.auth.getUser()
 
-  if (authError || !user) {
-    console.error('Auth error in saveProfileStepAction:', authError)
-    return { status: 'error', message: 'You must be logged in' }
-  }
+  // if (authError || !user) {
+  //   console.error('Auth error in saveProfileStepAction:', authError)
+  //   return { status: 'error', message: 'You must be logged in' }
+  // }
 
   // Build update object based on step
   let updateData: Record<string, unknown> = {}
@@ -167,50 +166,50 @@ export async function saveProfileStepAction(
       break
   }
 
-  console.log('Saving profile data for user:', user.id, 'Step:', step)
+  // console.log('Saving profile data for user:', user.id, 'Step:', step)
   console.log('Update data:', JSON.stringify(updateData, null, 2))
 
   // Check if profile exists
-  const { data: existingProfile, error: checkError } = await supabase
-    .from('user_profiles')
-    .select('id')
-    .eq('user_id', user.id)
-    .single()
+  // const { data: existingProfile, error: checkError } = await supabase
+  //   .from('user_profiles')
+  //   .select('id')
+  //   .eq('user_id', user.id)
+  //   .single()
 
-  if (checkError && checkError.code !== 'PGRST116') {
-    console.error('Error checking existing profile:', checkError)
-  }
+  // if (checkError && checkError.code !== 'PGRST116') {
+  //   console.error('Error checking existing profile:', checkError)
+  // }
 
-  let error
+  // let error
 
-  if (existingProfile) {
-    // Update existing profile
-    console.log('Updating existing profile:', existingProfile.id)
-    const result = await supabase
-      .from('user_profiles')
-      .update(updateData)
-      .eq('user_id', user.id)
-    error = result.error
-  } else {
-    // Insert new profile with required fields
-    console.log('Inserting new profile for user:', user.id)
-    const insertData = {
-      user_id: user.id,
-      full_name: (data.fullName as string) || 'New User',
-      date_of_birth: (data.dateOfBirth as string) || '2000-01-01',
-      gender: (data.gender as string) || 'prefer_not_to_say',
-      interests: (data.interests as string[]) || [],
-      ...updateData,
-    }
-    console.log('Insert data:', JSON.stringify(insertData, null, 2))
-    const result = await supabase.from('user_profiles').insert(insertData)
-    error = result.error
-  }
+  // if (existingProfile) {
+  //   // Update existing profile
+  //   console.log('Updating existing profile:', existingProfile.id)
+  //   const result = await supabase
+  //     .from('user_profiles')
+  //     .update(updateData)
+  //     .eq('user_id', user.id)
+  //   error = result.error
+  // } else {
+  //   // Insert new profile with required fields
+  //   console.log('Inserting new profile for user:', user.id)
+  //   const insertData = {
+  //     user_id: user.id,
+  //     full_name: (data.fullName as string) || 'New User',
+  //     date_of_birth: (data.dateOfBirth as string) || '2000-01-01',
+  //     gender: (data.gender as string) || 'prefer_not_to_say',
+  //     interests: (data.interests as string[]) || [],
+  //     ...updateData,
+  //   }
+  //   console.log('Insert data:', JSON.stringify(insertData, null, 2))
+  //   const result = await supabase.from('user_profiles').insert(insertData)
+  //   error = result.error
+  // }
 
-  if (error) {
-    console.error('Save profile step error:', error)
-    return { status: 'error', message: `Failed to save: ${error.message}` }
-  }
+  // if (error) {
+  //   console.error('Save profile step error:', error)
+  //   return { status: 'error', message: `Failed to save: ${error.message}` }
+  // }
 
   console.log('Profile saved successfully!')
   return { status: 'success', message: 'Progress saved' }

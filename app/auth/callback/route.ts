@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,11 +41,12 @@ export async function GET(request: NextRequest) {
   }
 
   // Default redirect destination and response used for cookie writes
+  // Default redirect destination and response used for cookie writes
   let redirectUrl = new URL('/onboarding/profile', origin)
   const response = NextResponse.redirect(redirectUrl, { status: 302 })
 
   // Create Supabase client bound to the current request/response cookies
-  const supabase = createRouteHandlerClient(request, response)
+  const supabase = await createClient()
 
   // Exchange the code for a session
   const { error, data } = await supabase.auth.exchangeCodeForSession(code)
@@ -89,6 +90,9 @@ export async function GET(request: NextRequest) {
     console.warn('No access token or API_URL, defaulting to onboarding');
   }
 
+  // Update redirect target on the existing response so Supabase-set cookies remain attached
+  response.headers.set('Location', redirectUrl.toString())
+  return response
   // Update redirect target on the existing response so Supabase-set cookies remain attached
   response.headers.set('Location', redirectUrl.toString())
   return response

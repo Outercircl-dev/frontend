@@ -1,5 +1,7 @@
+import { createServerClient } from "@supabase/ssr";
 import { createClient } from "./server";
 import { NextRequest, NextResponse } from "next/server";
+type ResponseCookie = { name: string; value: string; options?: Parameters<NextResponse['cookies']['set']>[2] };
 type ResponseCookie = { name: string; value: string; options?: Parameters<NextResponse['cookies']['set']>[2] };
 
 const PROTECTED_ROUTES = ["/feed", "/settings", "/activities", "/profile", "/onboarding"];
@@ -41,20 +43,29 @@ function getOrigin(request: NextRequest) {
 }
 
 export async function updateSession(request: NextRequest) {
-    const supabaseResponse = NextResponse.next({ request });
+    let supabaseResponse = NextResponse.next({
+        request,
+    })
     const pendingCookies: ResponseCookie[] = [];
 
-    const supabase = createClient({
-        getAll() {
-            return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-                supabaseResponse.cookies.set(name, value, options);
-                pendingCookies.push({ name, value, options });
-            });
-        },
-    });
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+        {
+            cookies: {
+                getAll() {
+                    return request.cookies.getAll()
+                },
+                setAll(cookiesToSet) {
+                    cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+                    supabaseResponse = NextResponse.next({
+                        request,
+                    })
+                    cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
+                },
+            },
+        }
+    )
 
     // Do not run code between createServerClient and
     // supabase.auth.getClaims(). A simple mistake could make it very hard to debug
@@ -75,6 +86,13 @@ export async function updateSession(request: NextRequest) {
         const url = new URL('/auth/callback', origin)
         url.search = request.nextUrl.search
         const redirectResponse = NextResponse.redirect(url)
+        console.log("Transfering cookies from Supabase Response to Redirect Response. Redirection to /auth/callback");
+        let iter = 0;
+        supabaseResponse.cookies.getAll().forEach(responseCookie => {
+            redirectResponse.cookies.set(responseCookie);
+            iter++;
+        });
+        console.log(`Total ${iter} cookies transferred. SupabaseResponse -> RedirectResponse`)
         pendingCookies.forEach(({ name, value, options }) => redirectResponse.cookies.set(name, value, options))
         return redirectResponse
     }
@@ -90,6 +108,13 @@ export async function updateSession(request: NextRequest) {
     if (!hasSession && isProtectedRoute) {
         const url = new URL('/login', origin)
         const redirectResponse = NextResponse.redirect(url)
+        console.log("Transfering cookies from Supabase Response to Redirect Response. Redirection to /auth/callback");
+        let iter = 0;
+        supabaseResponse.cookies.getAll().forEach(responseCookie => {
+            redirectResponse.cookies.set(responseCookie);
+            iter++;
+        });
+        console.log(`Total ${iter} cookies transferred. SupabaseResponse -> RedirectResponse`)
         pendingCookies.forEach(({ name, value, options }) => redirectResponse.cookies.set(name, value, options))
         return redirectResponse
     }
