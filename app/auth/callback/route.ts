@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   const response = NextResponse.redirect(redirectUrl, { status: 302 })
 
   // Create Supabase client bound to the current request/response cookies
-  const supabase = createRouteHandlerClient(request, response)
+  const supabase = await createClient()
 
   // Exchange the code for a session
   const { error, data } = await supabase.auth.exchangeCodeForSession(code)

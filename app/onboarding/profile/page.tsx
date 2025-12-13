@@ -13,7 +13,7 @@ import {
   PreferencesStep,
   GuidelinesStep,
 } from '@/components/onboarding'
-import { getInterestsAction } from '@/actions/profile'
+// import { getInterestsAction } from '@/actions/profile'
 import { saveProfileFromClient } from '@/lib/supabase/client-actions'
 import { defaultProfileValues } from '@/lib/validations/profile'
 import type { OnboardingFormData, InterestCategory } from '@/lib/types/profile'
@@ -30,16 +30,16 @@ export default function OnboardingProfilePage() {
     mode: 'onBlur',
   })
 
-  useEffect(() => {
-    async function loadInterests() {
-      const result = await getInterestsAction()
-      if (result.categories) {
-        setCategories(result.categories)
-      }
-      setIsLoading(false)
-    }
-    loadInterests()
-  }, [])
+  // useEffect(() => {
+  //   async function loadInterests() {
+  //     const result = await getInterestsAction()
+  //     if (result.categories) {
+  //       setCategories(result.categories)
+  //     }
+  //     setIsLoading(false)
+  //   }
+  //   loadInterests()
+  // }, [])
 
   const handleNext = () => {
     // Just move to next step - we'll save everything at the end
@@ -54,7 +54,7 @@ export default function OnboardingProfilePage() {
     setIsSubmitting(true)
     try {
       const data = form.getValues()
-      
+
       // Use client-side save (more reliable for auth)
       const result = await saveProfileFromClient({
         fullName: data.fullName,

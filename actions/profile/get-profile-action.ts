@@ -9,38 +9,38 @@ export interface GetProfileResult {
   error: string | null
 }
 
-export async function getProfileAction(): Promise<GetProfileResult> {
-  const cookieStore = await cookies()
-  const supabase = createServerActionClient(cookieStore)
+// export async function getProfileAction(): Promise<GetProfileResult> {
+//   const cookieStore = await cookies()
+//   const supabase = createServerActionClient(cookieStore)
 
-  // Get current user
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
+//   // Get current user
+//   const {
+//     data: { user },
+//     error: authError,
+//   } = await supabase.auth.getUser()
 
-  if (authError || !user) {
-    return { profile: null, error: 'Not authenticated' }
-  }
+//   if (authError || !user) {
+//     return { profile: null, error: 'Not authenticated' }
+//   }
 
-  // Fetch profile
-  const { data, error } = await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('user_id', user.id)
-    .single()
+//   // Fetch profile
+//   const { data, error } = await supabase
+//     .from('user_profiles')
+//     .select('*')
+//     .eq('user_id', user.id)
+//     .single()
 
-  // PGRST116 means no rows found - not an error for us
-  if (error && error.code !== 'PGRST116') {
-    console.error('Get profile error:', error)
-    return { profile: null, error: error.message }
-  }
+//   // PGRST116 means no rows found - not an error for us
+//   if (error && error.code !== 'PGRST116') {
+//     console.error('Get profile error:', error)
+//     return { profile: null, error: error.message }
+//   }
 
-  return { profile: data, error: null }
-}
+//   return { profile: data, error: null }
+// }
 
-export async function checkProfileCompleted(): Promise<boolean> {
-  const { profile } = await getProfileAction()
-  return profile?.profile_completed ?? false
-}
+// export async function checkProfileCompleted(): Promise<boolean> {
+//   const { profile } = await getProfileAction()
+//   return profile?.profile_completed ?? false
+// }
 
