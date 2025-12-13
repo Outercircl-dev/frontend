@@ -32,7 +32,6 @@ interface BackendMeResponse {
  */
 export async function GET(request: NextRequest) {
   const origin = SITE_URL ?? request.nextUrl.origin
-  const origin = SITE_URL ?? request.nextUrl.origin
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
   console.log("callback cookies:", request.cookies.getAll().map((c: { name: any; }) => c.name));
@@ -44,7 +43,6 @@ export async function GET(request: NextRequest) {
   // Default redirect destination and response used for cookie writes
   // Default redirect destination and response used for cookie writes
   let redirectUrl = new URL('/onboarding/profile', origin)
-  const response = NextResponse.redirect(redirectUrl, { status: 302 })
   const response = NextResponse.redirect(redirectUrl, { status: 302 })
 
   // Create Supabase client bound to the current request/response cookies
