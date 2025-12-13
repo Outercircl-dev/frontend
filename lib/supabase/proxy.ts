@@ -2,8 +2,6 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "./server";
 import { NextRequest, NextResponse } from "next/server";
 type ResponseCookie = { name: string; value: string; options?: Parameters<NextResponse['cookies']['set']>[2] };
-type ResponseCookie = { name: string; value: string; options?: Parameters<NextResponse['cookies']['set']>[2] };
-
 const PROTECTED_ROUTES = ["/feed", "/settings", "/activities", "/profile", "/onboarding"];
 const AUTH_ROUTES = ["/login", "/"];
 const PUBLIC_ROUTES = ["/auth/callback"];
