@@ -15,7 +15,7 @@ export enum UserAuthState {
 
   /**
    * User has valid session and verified email but profile incomplete
-   * Redirect to: /auth/complete-profile
+   * Redirect to: /onboarding/profile
    */
   NEEDS_PROFILE_COMPLETION = 'needs-profile',
 
@@ -71,11 +71,11 @@ export function getRedirectUrlForState(state: UserAuthStateType): string {
     case UserAuthState.NEEDS_EMAIL_VERIFICATION:
       return '/auth/verify-email';
     case UserAuthState.NEEDS_PROFILE_COMPLETION:
-      return '/auth/complete-profile';
+      return '/onboarding/profile';
     case UserAuthState.ACTIVE:
       return '/feed';
     default:
-      return '/auth/login';
+      return '/login';
   }
 }
 
