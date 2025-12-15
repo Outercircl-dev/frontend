@@ -40,7 +40,7 @@ export async function verifyEmailAction(
         }
         const supabase = await createClient()
         const { email, intent } = parsed.data
-        const redirectTo = `${getBaseUrl()}/auth/callback`
+        const redirectTo = `${getBaseUrl()}/auth/confirm`
 
         // For sign in, we still allow creating user if they don't exist
         // This provides a better UX - users don't need to remember if they've signed up
