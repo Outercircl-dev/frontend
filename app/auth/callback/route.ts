@@ -93,7 +93,4 @@ export async function GET(request: NextRequest) {
   // Update redirect target on the existing response so Supabase-set cookies remain attached
   response.headers.set('Location', redirectUrl.toString())
   return response
-  // Update redirect target on the existing response so Supabase-set cookies remain attached
-  response.headers.set('Location', redirectUrl.toString())
-  return response
 }

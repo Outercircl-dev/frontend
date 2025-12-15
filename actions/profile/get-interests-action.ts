@@ -2,6 +2,7 @@
 
 import { cookies } from 'next/headers'
 import type { Interest, InterestCategory } from '@/lib/types/profile'
+import { createClient } from '@/lib/supabase/server'
 
 export interface GetInterestsResult {
   interests: Interest[]
@@ -63,33 +64,29 @@ function groupInterestsByCategory(interests: Interest[]): InterestCategory[] {
   }))
 }
 
-// export async function getInterestsAction(): Promise<GetInterestsResult> {
-//   try {
-//     const cookieStore = await cookies()
-//     // const supabase = createServerActionClient(cookieStore)
+export async function getInterestsAction(): Promise<GetInterestsResult> {
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase.from('interests')
+      .select('*')
+      .order('sort_order', { ascending: true })
 
-//     // const { data, error } = await supabase
-//     //   .from('interests')
-//     //   .select('*')
-//     //   .order('sort_order', { ascending: true })
+    if (error) {
+      console.error('Get interests error (using fallback):', error.message)
+      // Use fallback interests when database fails
+      const categories = groupInterestsByCategory(FALLBACK_INTERESTS)
+      return { interests: FALLBACK_INTERESTS, categories, error: null }
+    }
 
-//     // if (error) {
-//     //   console.error('Get interests error (using fallback):', error.message)
-//     //   // Use fallback interests when database fails
-//     //   const categories = groupInterestsByCategory(FALLBACK_INTERESTS)
-//     //   return { interests: FALLBACK_INTERESTS, categories, error: null }
-//     // }
+    const interests = data && data.length > 0 ? data : FALLBACK_INTERESTS
+    const categories = groupInterestsByCategory(interests)
 
-//     // const interests = data && data.length > 0 ? data : FALLBACK_INTERESTS
-//     // const categories = groupInterestsByCategory(interests)
-
-//     // return { None, categories, error: null }
-//     return {}
-//   } catch (err) {
-//     console.error('Get interests exception (using fallback):', err)
-//     // Use fallback interests on any error
-//     const categories = groupInterestsByCategory(FALLBACK_INTERESTS)
-//     return { interests: FALLBACK_INTERESTS, categories, error: null }
-//   }
-// }
+    return { interests, categories, error: null }
+  } catch (err) {
+    console.error('Get interests exception (using fallback):', err)
+    // Use fallback interests on any error
+    const categories = groupInterestsByCategory(FALLBACK_INTERESTS)
+    return { interests: FALLBACK_INTERESTS, categories, error: null }
+  }
+}
 
