@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "./server";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserAuthState, getRedirectUrlForState } from "../auth-state-machine";
+import type { BackendMeResponse } from "../types/auth";
 type ResponseCookie = { name: string; value: string; options?: Parameters<NextResponse['cookies']['set']>[2] };
 const PROTECTED_ROUTES = ["/feed", "/settings", "/activities", "/profile", "/onboarding"];
 const AUTH_ROUTES = ["/login", "/"];
@@ -12,14 +13,6 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')
 
 if (!API_URL) {
     throw new Error('NEXT_PUBLIC_API_URL is not set')
-}
-
-interface MeResponse {
-    id: string
-    supabaseUserId: string
-    email: string
-    hasOnboarded: boolean
-    role: string
 }
 
 function getOrigin(request: NextRequest) {
@@ -39,6 +32,21 @@ function getOrigin(request: NextRequest) {
     }
 
     return request.nextUrl.origin
+}
+
+function redirectWithCookies(
+    url: URL,
+    supabaseResponse: NextResponse,
+    pendingCookies: ResponseCookie[],
+): NextResponse {
+    const redirectResponse = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach((responseCookie) => {
+        redirectResponse.cookies.set(responseCookie);
+    });
+    pendingCookies.forEach(({ name, value, options }) =>
+        redirectResponse.cookies.set(name, value, options),
+    );
+    return redirectResponse;
 }
 
 export async function updateSession(request: NextRequest) {
@@ -79,9 +87,10 @@ export async function updateSession(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const origin = getOrigin(request)
 
-    // Handle magic link code - exchange code for session in proxy (frontend doesn't talk to Supabase directly)
+    // Handle magic link code - always exchange code for session in proxy
+    // (frontend routes should not talk directly to Supabase)
     const code = searchParams.get('code')
-    if (code && pathname !== '/auth/confirm') {
+    if (code) {
         // Exchange code for session - this sets cookies via setAll callback
         const { data, error } = await supabase.auth.exchangeCodeForSession(code)
         
@@ -89,12 +98,7 @@ export async function updateSession(request: NextRequest) {
             // On error, redirect to login with error message
             const url = new URL('/login', origin)
             url.searchParams.set('error', encodeURIComponent(error.message))
-            const redirectResponse = NextResponse.redirect(url)
-            supabaseResponse.cookies.getAll().forEach(responseCookie => {
-                redirectResponse.cookies.set(responseCookie);
-            });
-            pendingCookies.forEach(({ name, value, options }) => redirectResponse.cookies.set(name, value, options))
-            return redirectResponse
+            return redirectWithCookies(url, supabaseResponse, pendingCookies)
         }
 
         // Code exchanged successfully, session cookies are set via setAll callback
@@ -103,14 +107,7 @@ export async function updateSession(request: NextRequest) {
         // Preserve any other query params (like type, etc.) but remove code since it's been used
         searchParams.delete('code')
         url.search = searchParams.toString()
-        const redirectResponse = NextResponse.redirect(url)
-        
-        // Copy all cookies from supabaseResponse (which now has session cookies from exchangeCodeForSession)
-        supabaseResponse.cookies.getAll().forEach(responseCookie => {
-            redirectResponse.cookies.set(responseCookie);
-        });
-        pendingCookies.forEach(({ name, value, options }) => redirectResponse.cookies.set(name, value, options))
-        return redirectResponse
+        return redirectWithCookies(url, supabaseResponse, pendingCookies)
     }
 
     const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route))
@@ -129,16 +126,22 @@ export async function updateSession(request: NextRequest) {
             const accessToken = currentSession?.access_token
             
             if (accessToken) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout for middleware
+
                 const backendResponse = await fetch(`${API_URL}/me`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json',
                     },
+                    signal: controller.signal,
                 });
 
+                clearTimeout(timeoutId);
+
                 if (backendResponse.ok) {
-                    const userData: MeResponse = await backendResponse.json()
+                    const userData: BackendMeResponse = await backendResponse.json()
                     // Use state machine to determine redirect (consistent with /api/v1/auth/me)
                     // Check email verification status from Supabase user; treat undefined as not verified
                     const user = currentSession?.user
@@ -147,54 +150,29 @@ export async function updateSession(request: NextRequest) {
                     const authState = getUserAuthState(emailVerified, profileCompleted)
                     const redirectPath = getRedirectUrlForState(authState)
                     const url = new URL(redirectPath, origin)
-                    const redirectResponse = NextResponse.redirect(url)
-                    supabaseResponse.cookies.getAll().forEach(responseCookie => {
-                        redirectResponse.cookies.set(responseCookie);
-                    });
-                    pendingCookies.forEach(({ name, value, options }) => redirectResponse.cookies.set(name, value, options))
-                    return redirectResponse
+                    return redirectWithCookies(url, supabaseResponse, pendingCookies)
                 } else {
                     // Backend call failed but user has session - default to onboarding as safe fallback
                     console.warn('Backend /me failed in proxy, defaulting to onboarding:', backendResponse.status)
                     const url = new URL('/onboarding/profile', origin)
-                    const redirectResponse = NextResponse.redirect(url)
-                    supabaseResponse.cookies.getAll().forEach(responseCookie => {
-                        redirectResponse.cookies.set(responseCookie);
-                    });
-                    pendingCookies.forEach(({ name, value, options }) => redirectResponse.cookies.set(name, value, options))
-                    return redirectResponse
+                    return redirectWithCookies(url, supabaseResponse, pendingCookies)
                 }
             } else {
                 // Has session but no access token - redirect to onboarding as safe fallback
                 const url = new URL('/onboarding/profile', origin)
-                const redirectResponse = NextResponse.redirect(url)
-                supabaseResponse.cookies.getAll().forEach(responseCookie => {
-                    redirectResponse.cookies.set(responseCookie);
-                });
-                pendingCookies.forEach(({ name, value, options }) => redirectResponse.cookies.set(name, value, options))
-                return redirectResponse
+                return redirectWithCookies(url, supabaseResponse, pendingCookies)
             }
         } catch (err) {
             console.error('Error checking user state in proxy:', err)
             // Backend error but user has session - default to onboarding as safe fallback
             const url = new URL('/onboarding/profile', origin)
-            const redirectResponse = NextResponse.redirect(url)
-            supabaseResponse.cookies.getAll().forEach(responseCookie => {
-                redirectResponse.cookies.set(responseCookie);
-            });
-            pendingCookies.forEach(({ name, value, options }) => redirectResponse.cookies.set(name, value, options))
-            return redirectResponse
+            return redirectWithCookies(url, supabaseResponse, pendingCookies)
         }
     }
 
     if (!hasSession && isProtectedRoute) {
         const url = new URL('/login', origin)
-        const redirectResponse = NextResponse.redirect(url)
-        supabaseResponse.cookies.getAll().forEach(responseCookie => {
-            redirectResponse.cookies.set(responseCookie);
-        });
-        pendingCookies.forEach(({ name, value, options }) => redirectResponse.cookies.set(name, value, options))
-        return redirectResponse
+        return redirectWithCookies(url, supabaseResponse, pendingCookies)
     }
 
     // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
