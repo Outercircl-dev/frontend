@@ -1,8 +1,13 @@
 'use server'
 
-import { cookies } from 'next/headers'
 import type { Interest, InterestCategory } from '@/lib/types/profile'
 import { createClient } from '@/lib/supabase/server'
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL
+
+interface BackendInterestsResponse {
+  categories: InterestCategory[]
+}
 
 export interface GetInterestsResult {
   interests: Interest[]
@@ -66,20 +71,34 @@ function groupInterestsByCategory(interests: Interest[]): InterestCategory[] {
 
 export async function getInterestsAction(): Promise<GetInterestsResult> {
   try {
-    const supabase = await createClient()
-    const { data, error } = await supabase.from('interests')
-      .select('*')
-      .order('sort_order', { ascending: true })
-
-    if (error) {
-      console.error('Get interests error (using fallback):', error.message)
-      // Use fallback interests when database fails
+    if (!API_URL) {
+      console.error('NEXT_PUBLIC_API_URL is not configured for interests fetch')
       const categories = groupInterestsByCategory(FALLBACK_INTERESTS)
-      return { interests: FALLBACK_INTERESTS, categories, error: null }
+      return { interests: FALLBACK_INTERESTS, categories, error: 'Backend URL not configured' }
     }
 
-    const interests = data && data.length > 0 ? data : FALLBACK_INTERESTS
-    const categories = groupInterestsByCategory(interests)
+    const supabase = await createClient()
+    const { data: sessionData } = await supabase.auth.getSession()
+    const accessToken = sessionData.session?.access_token
+
+    const backendResponse = await fetch(`${API_URL}/interests`, {
+      method: 'GET',
+      headers: {
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store',
+    })
+
+    if (!backendResponse.ok) {
+      console.error('Backend /interests failed, using fallback:', backendResponse.status)
+      const categories = groupInterestsByCategory(FALLBACK_INTERESTS)
+      return { interests: FALLBACK_INTERESTS, categories, error: 'Failed to fetch interests from backend' }
+    }
+
+    const backendData: BackendInterestsResponse = await backendResponse.json()
+    const categories = backendData.categories ?? []
+    const interests = categories.flatMap((category) => category.interests || [])
 
     return { interests, categories, error: null }
   } catch (err) {
