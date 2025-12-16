@@ -30,18 +30,9 @@ export async function GET(request: NextRequest) {
         accessToken = data.session?.access_token;
         session = data.session;
     } else {
-        // No token_hash means session was already set by proxy (from code exchange)
-        // Just get the existing session
-        const result = await supabase.auth.getSession();
-        const currentSession = result.data.session;
-        const sessionError = result.error;
-        
-        if (sessionError || !currentSession) {
-            return NextResponse.redirect(new URL('/login?error=no_session', origin))
-        }
-        
-        accessToken = currentSession.access_token;
-        session = currentSession;
+        // No token_hash - this should not happen in normal flow
+        // Redirect to login with authentication error
+        return NextResponse.redirect(new URL('/login?error=Authentication+Unsuccessful', origin))
     }
 
     // Default redirect destination path
@@ -74,15 +65,22 @@ export async function GET(request: NextRequest) {
                 const authState = getUserAuthState(emailVerified, profileCompleted);
                 redirectPath = getRedirectUrlForState(authState);
             } else {
-                console.error('Backend /me failed in confirm:', backendResponse.status);
-                // On backend error, default to onboarding (safe fallback)
+                // Backend /me failed - redirect to login with error message
+                const errorMessage = backendResponse.status === 401 
+                    ? 'Authentication+failed' 
+                    : 'Service+unavailable';
+                return NextResponse.redirect(new URL(`/login?error=${errorMessage}`, origin));
             }
         } catch (err) {
-            console.error('Error calling backend /me in confirm:', err);
-            // On error, default to onboarding (safe fallback)
+            // Network/timeout error - redirect to login with error message
+            const errorMessage = err instanceof Error && err.name === 'AbortError'
+                ? 'Request+timeout'
+                : 'Service+unavailable';
+            return NextResponse.redirect(new URL(`/login?error=${errorMessage}`, origin));
         }
     } else {
-        console.warn('No access token or API_URL, defaulting to onboarding');
+        // Missing access token or API_URL - redirect to login with error
+        return NextResponse.redirect(new URL('/login?error=Configuration+error', origin));
     }
 
     // Create redirect response with computed path
