@@ -21,10 +21,10 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     
     let accessToken: string | undefined;
+    let session = undefined as undefined | { user?: { email_confirmed_at?: string | null } };
     
     // Handle token_hash (OTP verification) - if present, verify OTP
     if (tokenHash) {
-        console.log(`token_hash: ${tokenHash}`)
         const { data, error } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,
             type: 'email'
@@ -35,16 +35,20 @@ export async function GET(request: NextRequest) {
         }
         
         accessToken = data.session?.access_token;
+        session = data.session ?? undefined;
     } else {
         // No token_hash means session was already set by proxy (from code exchange)
         // Just get the existing session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const result = await supabase.auth.getSession();
+        const currentSession = result.data.session;
+        const sessionError = result.error;
         
-        if (sessionError || !session) {
+        if (sessionError || !currentSession) {
             return NextResponse.redirect(new URL('/login?error=no_session', origin))
         }
         
-        accessToken = session.access_token;
+        accessToken = currentSession.access_token;
+        session = currentSession;
     }
 
     // Default redirect destination
@@ -64,12 +68,10 @@ export async function GET(request: NextRequest) {
 
             if (backendResponse.ok) {
                 const userData: BackendMeResponse = await backendResponse.json();
-                console.log('########## BE Response #################', userData)
 
                 // Use state machine to determine redirect (consistent with /api/v1/auth/me)
-                // Get email verification status from Supabase session
-                const { data: { session } } = await supabase.auth.getSession();
-                const emailVerified = session?.user?.email_confirmed_at !== null;
+                // Get email verification status from the existing Supabase session
+                const emailVerified = Boolean(session && session.user && session.user.email_confirmed_at != null);
                 const profileCompleted = userData.hasOnboarded; // Use hasOnboarded from backend
                 const authState = getUserAuthState(emailVerified, profileCompleted);
                 const redirectPath = getRedirectUrlForState(authState);

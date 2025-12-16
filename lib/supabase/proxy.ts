@@ -140,9 +140,9 @@ export async function updateSession(request: NextRequest) {
                 if (backendResponse.ok) {
                     const userData: MeResponse = await backendResponse.json()
                     // Use state machine to determine redirect (consistent with /api/v1/auth/me)
-                    // Check email verification status from Supabase user
+                    // Check email verification status from Supabase user; treat undefined as not verified
                     const user = currentSession?.user
-                    const emailVerified = user?.email_confirmed_at !== null
+                    const emailVerified = Boolean(user && user.email_confirmed_at != null)
                     const profileCompleted = userData.hasOnboarded
                     const authState = getUserAuthState(emailVerified, profileCompleted)
                     const redirectPath = getRedirectUrlForState(authState)
