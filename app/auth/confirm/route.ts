@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserAuthState, getRedirectUrlForState } from "@/lib/auth-state-machine";
 import type { BackendMeResponse } from "@/lib/types/auth";
+import type { Session } from "@supabase/supabase-js";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     
     let accessToken: string | undefined;
-    let session = undefined as undefined | { user?: { email_confirmed_at?: string | null } };
+    let session: Session | undefined;
     
     // Handle token_hash (OTP verification) - if present, verify OTP
     if (tokenHash) {
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
 
                 // Use state machine to determine redirect (consistent with /api/v1/auth/me)
                 // Get email verification status from the existing Supabase session
-                const emailVerified = Boolean(session && session.user && session.user.email_confirmed_at != null);
+                const emailVerified = session?.user?.email_confirmed_at != null;
                 const profileCompleted = userData.hasOnboarded; // Use hasOnboarded from backend
                 const authState = getUserAuthState(emailVerified, profileCompleted);
                 redirectPath = getRedirectUrlForState(authState);
