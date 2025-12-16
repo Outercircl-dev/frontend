@@ -1,18 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserAuthState, getRedirectUrlForState } from "@/lib/auth-state-machine";
+import type { BackendMeResponse } from "@/lib/types/auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
-
-interface BackendMeResponse {
-    id: string;
-    supabaseUserId: string;
-    email: string;
-    hasOnboarded: boolean;
-    role: string;
-    type?: string;
-}
 
 export async function GET(request: NextRequest) {
     const origin = SITE_URL ?? request.nextUrl.origin
@@ -51,20 +43,25 @@ export async function GET(request: NextRequest) {
         session = currentSession;
     }
 
-    // Default redirect destination
-    let redirectUrl = new URL('/onboarding/profile', origin)
-    const response = NextResponse.redirect(redirectUrl, { status: 302 })
-    
+    // Default redirect destination path
+    let redirectPath = '/onboarding/profile'
+
     // Call backend /me to get user info and determine redirect (per architect review)
     if (accessToken && API_URL) {
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
             const backendResponse = await fetch(`${API_URL}/me`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                     'Content-Type': 'application/json',
                 },
+                signal: controller.signal,
             });
+
+            clearTimeout(timeoutId);
 
             if (backendResponse.ok) {
                 const userData: BackendMeResponse = await backendResponse.json();
@@ -74,8 +71,7 @@ export async function GET(request: NextRequest) {
                 const emailVerified = Boolean(session && session.user && session.user.email_confirmed_at != null);
                 const profileCompleted = userData.hasOnboarded; // Use hasOnboarded from backend
                 const authState = getUserAuthState(emailVerified, profileCompleted);
-                const redirectPath = getRedirectUrlForState(authState);
-                redirectUrl = new URL(redirectPath, origin);
+                redirectPath = getRedirectUrlForState(authState);
             } else {
                 console.error('Backend /me failed in confirm:', backendResponse.status);
                 // On backend error, default to onboarding (safe fallback)
