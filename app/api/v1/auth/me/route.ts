@@ -68,13 +68,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
     const backendResponse = await fetch(`${API_URL}/api/me`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!backendResponse.ok) {
       const errorText = await backendResponse.text();
