@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
         }
         
         accessToken = data.session?.access_token;
-        session = data.session;
+        session = data.session ?? undefined;
     } else {
         // No token_hash - this should not happen in normal flow
         // Redirect to login with authentication error
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-            const backendResponse = await fetch(`${API_URL}/me`, {
+            const backendResponse = await fetch(`${API_URL}/api/me`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -65,18 +65,23 @@ export async function GET(request: NextRequest) {
                 const authState = getUserAuthState(emailVerified, profileCompleted);
                 redirectPath = getRedirectUrlForState(authState);
             } else {
-                // Backend /me failed - redirect to login with error message
-                const errorMessage = backendResponse.status === 401 
-                    ? 'Authentication+failed' 
-                    : 'Service+unavailable';
-                return NextResponse.redirect(new URL(`/login?error=${errorMessage}`, origin));
+                // Backend /me failed
+                if (backendResponse.status === 401) {
+                    // Authentication failed - token invalid, redirect to login
+                    return NextResponse.redirect(new URL('/login?error=Authentication+failed', origin));
+                } else {
+                    // Service error (500, 503, etc.) - for new users completing magic link,
+                    // allow onboarding as fallback (backend might be temporarily down)
+                    // Note: Proxy still enforces strict error handling for authenticated users
+                    console.warn('Backend /me failed in auth/confirm, defaulting to onboarding:', backendResponse.status);
+                    // Keep default redirectPath = '/onboarding/profile'
+                }
             }
         } catch (err) {
-            // Network/timeout error - redirect to login with error message
-            const errorMessage = err instanceof Error && err.name === 'AbortError'
-                ? 'Request+timeout'
-                : 'Service+unavailable';
-            return NextResponse.redirect(new URL(`/login?error=${errorMessage}`, origin));
+            // Network/timeout error - for new users, default to onboarding as fallback
+            // (Backend might be temporarily unavailable, but user should be able to try onboarding)
+            console.warn('Error calling backend /me in auth/confirm, defaulting to onboarding:', err);
+            // Keep default redirectPath = '/onboarding/profile'
         }
     } else {
         // Missing access token or API_URL - redirect to login with error

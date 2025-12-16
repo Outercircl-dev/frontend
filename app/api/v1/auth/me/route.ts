@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const backendResponse = await fetch(`${API_URL}/me`, {
+    const backendResponse = await fetch(`${API_URL}/api/me`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,

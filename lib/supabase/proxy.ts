@@ -119,7 +119,9 @@ export async function updateSession(request: NextRequest) {
     const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route))
 
     // If user has session and tries to access auth routes, redirect them to appropriate protected route
-    if (hasSession && isAuthRoute) {
+    // BUT: Skip redirect if we're already on /login with an error (prevents infinite loop when backend fails)
+    const hasErrorParam = searchParams.has('error')
+    if (hasSession && isAuthRoute && !(pathname === '/login' && hasErrorParam)) {
         // Call backend /me to determine where user should go
         try {
             const { data: { session: currentSession } } = await supabase.auth.getSession()
@@ -129,7 +131,7 @@ export async function updateSession(request: NextRequest) {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout for middleware
 
-                const backendResponse = await fetch(`${API_URL}/me`, {
+                const backendResponse = await fetch(`${API_URL}/api/me`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${accessToken}`,
@@ -152,20 +154,24 @@ export async function updateSession(request: NextRequest) {
                     const url = new URL(redirectPath, origin)
                     return redirectWithCookies(url, supabaseResponse, pendingCookies)
                 } else {
-                    // Backend call failed but user has session - default to onboarding as safe fallback
-                    console.warn('Backend /me failed in proxy, defaulting to onboarding:', backendResponse.status)
-                    const url = new URL('/onboarding/profile', origin)
+                    // Backend /me failed - redirect to login with error message
+                    const errorMessage = backendResponse.status === 401
+                        ? 'Authentication+failed'
+                        : 'Service+unavailable';
+                    const url = new URL(`/login?error=${errorMessage}`, origin)
                     return redirectWithCookies(url, supabaseResponse, pendingCookies)
                 }
             } else {
-                // Has session but no access token - redirect to onboarding as safe fallback
-                const url = new URL('/onboarding/profile', origin)
+                // Has session but no access token - redirect to login with error
+                const url = new URL('/login?error=Configuration+error', origin)
                 return redirectWithCookies(url, supabaseResponse, pendingCookies)
             }
         } catch (err) {
-            console.error('Error checking user state in proxy:', err)
-            // Backend error but user has session - default to onboarding as safe fallback
-            const url = new URL('/onboarding/profile', origin)
+            // Network/timeout error - redirect to login with error message
+            const errorMessage = err instanceof Error && err.name === 'AbortError'
+                ? 'Request+timeout'
+                : 'Service+unavailable';
+            const url = new URL(`/login?error=${errorMessage}`, origin)
             return redirectWithCookies(url, supabaseResponse, pendingCookies)
         }
     }
