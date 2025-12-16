@@ -1,28 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getRedirectUrlForState, getUserAuthState } from '@/lib/auth-state-machine';
+import { BackendMeResponse, SubscriptionTier } from '@/lib/types/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-/**
- * Subscription tier enum - matches backend SubscriptionTier
- */
-export enum SubscriptionTier {
-  FREEMIUM = 'FREEMIUM',
-  PREMIUM = 'PREMIUM',
-}
-
-/**
- * Backend /me response shape
- */
-interface BackendMeResponse {
-  id: string;
-  supabaseUserId: string;
-  email: string;
-  hasOnboarded: boolean;
-  role: string;
-  type: SubscriptionTier;
-}
 
 /**
  * Response shape for frontend consumption
@@ -129,7 +110,7 @@ export async function GET(request: NextRequest) {
         id: backendData.id,
         email: backendData.email,
         supabaseUserId: backendData.supabaseUserId,
-        type: backendData.type ?? SubscriptionTier.FREEMIUM,
+        type: backendData.type ?? SubscriptionTier.FREEMIUM, // Handle potential undefined from backend
       },
       profile: {
         emailVerified,

@@ -24,7 +24,9 @@ export async function GET(request: NextRequest) {
         })
         
         if (error) {
-            return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error.message)}`, origin))
+            const url = new URL('/login', origin);
+            url.searchParams.set('error', error.message);
+            return NextResponse.redirect(url);
         }
         
         accessToken = data.session?.access_token;
@@ -32,7 +34,9 @@ export async function GET(request: NextRequest) {
     } else {
         // No token_hash - this should not happen in normal flow
         // Redirect to login with authentication error
-        return NextResponse.redirect(new URL('/login?error=Authentication+Unsuccessful', origin))
+        const url = new URL('/login', origin);
+        url.searchParams.set('error', 'Authentication Unsuccessful');
+        return NextResponse.redirect(url);
     }
 
     // Default redirect destination path
@@ -68,7 +72,9 @@ export async function GET(request: NextRequest) {
                 // Backend /me failed
                 if (backendResponse.status === 401) {
                     // Authentication failed - token invalid, redirect to login
-                    return NextResponse.redirect(new URL('/login?error=Authentication+failed', origin));
+                    const url = new URL('/login', origin);
+                    url.searchParams.set('error', 'Authentication failed');
+                    return NextResponse.redirect(url);
                 } else {
                     // Service error (500, 503, etc.) - for new users completing magic link,
                     // allow onboarding as fallback (backend might be temporarily down)
@@ -85,7 +91,13 @@ export async function GET(request: NextRequest) {
         }
     } else {
         // Missing access token or API_URL - redirect to login with error
-        return NextResponse.redirect(new URL('/login?error=Configuration+error', origin));
+        // Distinguish between auth failure (missing accessToken) vs config error (missing API_URL)
+        const errorMsg = !accessToken
+            ? 'Authentication+failed'
+            : 'Configuration+error';
+        const url = new URL('/login', origin);
+        url.searchParams.set('error', errorMsg);
+        return NextResponse.redirect(url);
     }
 
     // Create redirect response with computed path

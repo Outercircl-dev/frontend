@@ -97,7 +97,7 @@ export async function updateSession(request: NextRequest) {
         if (error) {
             // On error, redirect to login with error message
             const url = new URL('/login', origin)
-            url.searchParams.set('error', encodeURIComponent(error.message))
+            url.searchParams.set('error', error.message)
             return redirectWithCookies(url, supabaseResponse, pendingCookies)
         }
 
@@ -156,22 +156,25 @@ export async function updateSession(request: NextRequest) {
                 } else {
                     // Backend /me failed - redirect to login with error message
                     const errorMessage = backendResponse.status === 401
-                        ? 'Authentication+failed'
-                        : 'Service+unavailable';
-                    const url = new URL(`/login?error=${errorMessage}`, origin)
+                        ? 'Authentication failed'
+                        : 'Service unavailable';
+                    const url = new URL('/login', origin);
+                    url.searchParams.set('error', errorMessage);
                     return redirectWithCookies(url, supabaseResponse, pendingCookies)
                 }
             } else {
                 // Has session but no access token - redirect to login with error
-                const url = new URL('/login?error=Configuration+error', origin)
+                const url = new URL('/login', origin);
+                url.searchParams.set('error', 'Configuration error');
                 return redirectWithCookies(url, supabaseResponse, pendingCookies)
             }
         } catch (err) {
             // Network/timeout error - redirect to login with error message
             const errorMessage = err instanceof Error && err.name === 'AbortError'
-                ? 'Request+timeout'
-                : 'Service+unavailable';
-            const url = new URL(`/login?error=${errorMessage}`, origin)
+                ? 'Request timeout'
+                : 'Service unavailable';
+            const url = new URL('/login', origin);
+            url.searchParams.set('error', errorMessage);
             return redirectWithCookies(url, supabaseResponse, pendingCookies)
         }
     }
