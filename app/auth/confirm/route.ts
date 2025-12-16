@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
         }
         
         accessToken = data.session?.access_token;
-        session = data.session ?? undefined;
+        session = data.session;
     } else {
         // No token_hash means session was already set by proxy (from code exchange)
         // Just get the existing session
