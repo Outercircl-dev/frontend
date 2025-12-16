@@ -84,7 +84,8 @@ export async function GET(request: NextRequest) {
         console.warn('No access token or API_URL, defaulting to onboarding');
     }
 
-    // Update redirect target on the existing response so Supabase-set cookies remain attached
-    response.headers.set('Location', redirectUrl.toString())
-    return response
+    // Create redirect response with computed path
+    // Supabase cookies are already set via createClient() server function's cookie handling
+    const redirectUrl = new URL(redirectPath, origin);
+    return NextResponse.redirect(redirectUrl);
 }
