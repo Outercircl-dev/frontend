@@ -12,11 +12,17 @@ export const metadata: Metadata = {
 }
 
 interface LoginPageProps {
-    searchParams: { error?: string }
+    searchParams: Promise<{ error?: string | string[] }>
 }
 
-export default function LoginPage({ searchParams }: LoginPageProps) {
-    const errorMessage = searchParams.error ? decodeURIComponent(searchParams.error.replace(/\+/g, ' ')) : null
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+    const params = await searchParams
+    const errorValue = params.error
+    const errorMessage = errorValue
+        ? decodeURIComponent(
+              (Array.isArray(errorValue) ? errorValue[0] : errorValue).replace(/\+/g, ' ')
+          )
+        : null
     return (
         <div className="grid min-h-screen bg-muted/40 lg:grid-cols-[1.05fr_0.95fr]">
             <section className="flex flex-col gap-10 px-8 py-16 lg:px-14">
