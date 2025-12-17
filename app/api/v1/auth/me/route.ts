@@ -1,28 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getRedirectUrlForState, getUserAuthState } from '@/lib/auth-state-machine';
+import { BackendMeResponse, SubscriptionTier } from '@/lib/types/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-/**
- * Subscription tier enum - matches backend SubscriptionTier
- */
-export enum SubscriptionTier {
-  FREEMIUM = 'FREEMIUM',
-  PREMIUM = 'PREMIUM',
-}
-
-/**
- * Backend /me response shape
- */
-interface BackendMeResponse {
-  id: string;
-  supabaseUserId: string;
-  email: string;
-  hasOnboarded: boolean;
-  role: string;
-  type: SubscriptionTier;
-}
 
 /**
  * Response shape for frontend consumption
@@ -58,64 +39,64 @@ interface AuthMeResponse {
  */
 export async function GET(request: NextRequest) {
   try {
-    // const attachCookies = (response: NextResponse) => {
-    //   responseCookies.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
-    //   return response;
-    // };
-
     // 1. Get Supabase client (uses request cookies)
     const supabase = await createClient();
 
     // 2. Get current session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-    // if (sessionError || !session) {
-    //   return attachCookies(NextResponse.json(
-    //     { error: 'Unauthorized', message: 'No valid session' },
-    //     { status: 401 }
-    //   ));
-    // }
+    if (sessionError || !session) {
+      return NextResponse.json(
+        { error: 'Unauthorized', message: 'No valid session' },
+        { status: 401 }
+      );
+    }
 
-    const accessToken = session?.access_token;
-    const user = session?.user;
+    const accessToken = session.access_token;
+    const user = session.user;
 
     // 3. Get email_verified from Supabase user
     // Supabase stores this in user metadata when email is confirmed
-    const emailVerified = user?.email_confirmed_at !== null;
+    const emailVerified = user.email_confirmed_at !== null;
 
     // 4. Call backend /me endpoint with Bearer token
     if (!API_URL) {
       console.error('NEXT_PUBLIC_API_URL is not configured');
-      // return attachCookies(NextResponse.json(
-      //   { error: 'Internal Server Error', message: 'Backend URL not configured' },
-      //   { status: 500 }
-      // ));
+      return NextResponse.json(
+        { error: 'Internal Server Error', message: 'Backend URL not configured' },
+        { status: 500 }
+      );
     }
 
-    const backendResponse = await fetch(`${API_URL}/me`, {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+    const backendResponse = await fetch(`${API_URL}/api/me`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!backendResponse.ok) {
       const errorText = await backendResponse.text();
       console.error('Backend /me error:', backendResponse.status, errorText);
 
-
       if (backendResponse.status === 401) {
-        // return attachCookies(NextResponse.json(
-        //   { error: 'Unauthorized', message: 'Backend authentication failed' },
-        //   { status: 401 }
-        // ));
+        return NextResponse.json(
+          { error: 'Unauthorized', message: 'Backend authentication failed' },
+          { status: 401 }
+        );
       }
 
-      // return attachCookies(NextResponse.json(
-      //   { error: 'Internal Server Error', message: 'Backend request failed' },
-      //   { status: 500 }
-      // ));
+      return NextResponse.json(
+        { error: 'Internal Server Error', message: 'Backend request failed' },
+        { status: 500 }
+      );
     }
 
     const backendData: BackendMeResponse = await backendResponse.json();
@@ -135,7 +116,7 @@ export async function GET(request: NextRequest) {
         id: backendData.id,
         email: backendData.email,
         supabaseUserId: backendData.supabaseUserId,
-        type: backendData.type ?? SubscriptionTier.FREEMIUM,
+        type: backendData.type ?? SubscriptionTier.FREEMIUM, // Handle potential undefined from backend
       },
       profile: {
         emailVerified,
@@ -143,7 +124,7 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    // return attachCookies(NextResponse.json(response, { status: 200 }));
+    return NextResponse.json(response, { status: 200 });
 
   } catch (error) {
     console.error('Error in GET /api/v1/auth/me:', error);

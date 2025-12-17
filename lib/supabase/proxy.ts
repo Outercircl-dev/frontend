@@ -1,24 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "./server";
 import { NextRequest, NextResponse } from "next/server";
+import { getUserAuthState, getRedirectUrlForState } from "../auth-state-machine";
+import type { BackendMeResponse } from "../types/auth";
 type ResponseCookie = { name: string; value: string; options?: Parameters<NextResponse['cookies']['set']>[2] };
 const PROTECTED_ROUTES = ["/feed", "/settings", "/activities", "/profile", "/onboarding"];
 const AUTH_ROUTES = ["/login", "/"];
-const PUBLIC_ROUTES = ["/auth/callback"];
+const PUBLIC_ROUTES = ["/auth/confirm"];
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')
 
 if (!API_URL) {
     throw new Error('NEXT_PUBLIC_API_URL is not set')
-}
-
-interface MeResponse {
-    id: string
-    supabaseUserId: string
-    email: string
-    hasOnboarded: boolean
-    role: string
 }
 
 function getOrigin(request: NextRequest) {
@@ -38,6 +32,21 @@ function getOrigin(request: NextRequest) {
     }
 
     return request.nextUrl.origin
+}
+
+function redirectWithCookies(
+    url: URL,
+    supabaseResponse: NextResponse,
+    pendingCookies: ResponseCookie[],
+): NextResponse {
+    const redirectResponse = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach((responseCookie) => {
+        redirectResponse.cookies.set(responseCookie);
+    });
+    pendingCookies.forEach(({ name, value, options }) =>
+        redirectResponse.cookies.set(name, value, options),
+    );
+    return redirectResponse;
 }
 
 export async function updateSession(request: NextRequest) {
@@ -78,21 +87,27 @@ export async function updateSession(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const origin = getOrigin(request)
 
-    // Handle magic link code - redirect to auth/callback if code exists on any route
+    // Handle magic link code - always exchange code for session in proxy
+    // (frontend routes should not talk directly to Supabase)
     const code = searchParams.get('code')
-    if (code && pathname !== '/auth/callback') {
-        const url = new URL('/auth/callback', origin)
-        url.search = request.nextUrl.search
-        const redirectResponse = NextResponse.redirect(url)
-        console.log("Transfering cookies from Supabase Response to Redirect Response. Redirection to /auth/callback");
-        let iter = 0;
-        supabaseResponse.cookies.getAll().forEach(responseCookie => {
-            redirectResponse.cookies.set(responseCookie);
-            iter++;
-        });
-        console.log(`Total ${iter} cookies transferred. SupabaseResponse -> RedirectResponse`)
-        pendingCookies.forEach(({ name, value, options }) => redirectResponse.cookies.set(name, value, options))
-        return redirectResponse
+    if (code) {
+        // Exchange code for session - this sets cookies via setAll callback
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+        
+        if (error) {
+            // On error, redirect to login with error message
+            const url = new URL('/login', origin)
+            url.searchParams.set('error', error.message)
+            return redirectWithCookies(url, supabaseResponse, pendingCookies)
+        }
+
+        // Code exchanged successfully, session cookies are set via setAll callback
+        // Now redirect to /auth/confirm which will handle backend /me call and final redirect
+        const url = new URL('/auth/confirm', origin)
+        // Preserve any other query params (like type, etc.) but remove code since it's been used
+        searchParams.delete('code')
+        url.search = searchParams.toString()
+        return redirectWithCookies(url, supabaseResponse, pendingCookies)
     }
 
     const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route))
@@ -103,18 +118,70 @@ export async function updateSession(request: NextRequest) {
     const isAuthRoute = AUTH_ROUTES.includes(pathname)
     const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route))
 
+    // If user has session and tries to access auth routes, redirect them to appropriate protected route
+    // BUT: Skip redirect if we're already on /login with an error (prevents infinite loop when backend fails)
+    const hasErrorParam = searchParams.has('error')
+    if (hasSession && isAuthRoute && !(pathname === '/login' && hasErrorParam)) {
+        // Call backend /me to determine where user should go
+        try {
+            const { data: { session: currentSession } } = await supabase.auth.getSession()
+            const accessToken = currentSession?.access_token
+            
+            if (accessToken) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout for middleware
+
+                const backendResponse = await fetch(`${API_URL}/api/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    signal: controller.signal,
+                });
+
+                clearTimeout(timeoutId);
+
+                if (backendResponse.ok) {
+                    const userData: BackendMeResponse = await backendResponse.json()
+                    // Use state machine to determine redirect (consistent with /api/v1/auth/me)
+                    // Check email verification status from Supabase user; treat undefined as not verified
+                    const user = currentSession?.user
+                    const emailVerified = Boolean(user && user.email_confirmed_at !== null)
+                    const profileCompleted = userData.hasOnboarded
+                    const authState = getUserAuthState(emailVerified, profileCompleted)
+                    const redirectPath = getRedirectUrlForState(authState)
+                    const url = new URL(redirectPath, origin)
+                    return redirectWithCookies(url, supabaseResponse, pendingCookies)
+                } else {
+                    // Backend /me failed - redirect to login with error message
+                    const errorMessage = backendResponse.status === 401
+                        ? 'Authentication failed'
+                        : 'Service unavailable';
+                    const url = new URL('/login', origin);
+                    url.searchParams.set('error', errorMessage);
+                    return redirectWithCookies(url, supabaseResponse, pendingCookies)
+                }
+            } else {
+                // Has session but no access token - redirect to login with error
+                const url = new URL('/login', origin);
+                url.searchParams.set('error', 'Configuration error');
+                return redirectWithCookies(url, supabaseResponse, pendingCookies)
+            }
+        } catch (err) {
+            // Network/timeout error - redirect to login with error message
+            const errorMessage = err instanceof Error && err.name === 'AbortError'
+                ? 'Request timeout'
+                : 'Service unavailable';
+            const url = new URL('/login', origin);
+            url.searchParams.set('error', errorMessage);
+            return redirectWithCookies(url, supabaseResponse, pendingCookies)
+        }
+    }
+
     if (!hasSession && isProtectedRoute) {
         const url = new URL('/login', origin)
-        const redirectResponse = NextResponse.redirect(url)
-        console.log("Transfering cookies from Supabase Response to Redirect Response. Redirection to /auth/callback");
-        let iter = 0;
-        supabaseResponse.cookies.getAll().forEach(responseCookie => {
-            redirectResponse.cookies.set(responseCookie);
-            iter++;
-        });
-        console.log(`Total ${iter} cookies transferred. SupabaseResponse -> RedirectResponse`)
-        pendingCookies.forEach(({ name, value, options }) => redirectResponse.cookies.set(name, value, options))
-        return redirectResponse
+        return redirectWithCookies(url, supabaseResponse, pendingCookies)
     }
 
     // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
