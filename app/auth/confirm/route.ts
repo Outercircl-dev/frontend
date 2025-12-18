@@ -12,23 +12,23 @@ export async function GET(request: NextRequest) {
     const requestUrl = new URL(request.url)
     const tokenHash = requestUrl.searchParams.get('token_hash');
     const supabase = await createClient();
-    
+
     let accessToken: string | undefined;
     let session: Session | undefined;
-    
+
     // Handle token_hash (OTP verification) - if present, verify OTP
     if (tokenHash) {
         const { data, error } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,
             type: 'email'
         })
-        
+
         if (error) {
             const url = new URL('/login', origin);
             url.searchParams.set('error', error.message);
             return NextResponse.redirect(url);
         }
-        
+
         accessToken = data.session?.access_token;
         session = data.session ?? undefined;
     } else {

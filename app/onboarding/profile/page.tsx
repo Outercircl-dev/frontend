@@ -13,7 +13,7 @@ import {
   PreferencesStep,
   GuidelinesStep,
 } from '@/components/onboarding'
-// import { getInterestsAction } from '@/actions/profile'
+import { getInterestsAction } from '@/actions/profile'
 import { saveProfileFromClient } from '@/lib/supabase/client-actions'
 import { defaultProfileValues } from '@/lib/validations/profile'
 import type { OnboardingFormData, InterestCategory } from '@/lib/types/profile'
@@ -30,16 +30,16 @@ export default function OnboardingProfilePage() {
     mode: 'onBlur',
   })
 
-  // useEffect(() => {
-  //   async function loadInterests() {
-  //     const result = await getInterestsAction()
-  //     if (result.categories) {
-  //       setCategories(result.categories)
-  //     }
-  //     setIsLoading(false)
-  //   }
-  //   loadInterests()
-  // }, [])
+  useEffect(() => {
+    async function loadInterests() {
+      const result = await getInterestsAction()
+      if (result.categories) {
+        setCategories(result.categories)
+      }
+      setIsLoading(false)
+    }
+    loadInterests()
+  }, [])
 
   const handleNext = () => {
     // Just move to next step - we'll save everything at the end
@@ -52,34 +52,38 @@ export default function OnboardingProfilePage() {
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
-    try {
-      const data = form.getValues()
+    // try {
+    //   const data = form.getValues()
 
-      // Use client-side save (more reliable for auth)
-      const result = await saveProfileFromClient({
-        fullName: data.fullName,
-        dateOfBirth: data.dateOfBirth,
-        gender: data.gender,
-        profilePictureUrl: data.profilePictureUrl || null,
-        interests: data.interests,
-        bio: data.bio || null,
-        hobbies: data.hobbies || [],
-        distanceRadiusKm: data.distanceRadiusKm || 25,
-        availability: data.availability || {},
-      })
+    //   // Use client-side save (more reliable for auth)
+    //   const result = await saveProfileFromClient({
+    //     fullName: data.fullName,
+    //     dateOfBirth: data.dateOfBirth,
+    //     gender: data.gender,
+    //     profilePictureUrl: data.profilePictureUrl || null,
+    //     interests: data.interests,
+    //     bio: data.bio || null,
+    //     hobbies: data.hobbies || [],
+    //     distanceRadiusKm: data.distanceRadiusKm || 25,
+    //     availability: data.availability || {},
+    //   })
 
-      if (result.success) {
-        router.push('/feed')
-      } else {
-        console.error('Profile save failed:', result.error)
-        alert('Failed to save profile: ' + result.error)
-      }
-    } catch (error) {
-      console.error('Submit error:', error)
-      alert('An error occurred while saving your profile.')
-    } finally {
-      setIsSubmitting(false)
-    }
+    //   if (result.success) {
+    //     router.push('/feed')
+    //   } else {
+    //     console.error('Profile save failed:', result.error)
+    //     alert('Failed to save profile: ' + result.error)
+    //   }
+    // } catch (error) {
+    //   console.error('Submit error:', error)
+    //   alert('An error occurred while saving your profile.')
+    // } finally {
+    //   setIsSubmitting(false)
+    // }
+
+    // 1. Create an endpoint on backend for saving interests
+    // 2. Send a Form Action (follow verify-email-action.ts)
+    // 3. Using form action send the data to backend for storing
   }
 
   if (isLoading) {
