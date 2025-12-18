@@ -66,7 +66,7 @@ export function useAuthState(): UseAuthStateReturn {
       if (!response.ok) {
         if (response.status === 401) {
           setState(null);
-          setRedirectUrl('/auth/login');
+          setRedirectUrl('/login');
           setUser(null);
           setProfile(null);
           return;
@@ -82,7 +82,7 @@ export function useAuthState(): UseAuthStateReturn {
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'));
       setState(null);
-      setRedirectUrl('/auth/login');
+      setRedirectUrl('/login');
       setUser(null);
       setProfile(null);
     } finally {

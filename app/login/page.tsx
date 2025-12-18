@@ -11,7 +11,18 @@ export const metadata: Metadata = {
     description: 'Join local adventures with neighbors and trusted hosts.',
 }
 
-export default function LoginPage() {
+interface LoginPageProps {
+    searchParams: Promise<{ error?: string | string[] }>
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+    const params = await searchParams
+    const errorValue = params.error
+    const errorMessage = errorValue
+        ? decodeURIComponent(
+              (Array.isArray(errorValue) ? errorValue[0] : errorValue).replace(/\+/g, ' ')
+          )
+        : null
     return (
         <div className="grid min-h-screen bg-muted/40 lg:grid-cols-[1.05fr_0.95fr]">
             <section className="flex flex-col gap-10 px-8 py-16 lg:px-14">
@@ -56,6 +67,14 @@ export default function LoginPage() {
             <section className="relative flex items-center justify-center bg-background px-6 py-12">
                 <div className="absolute inset-0 -z-10 bg-linear-to-b from-primary/5 via-background to-background" />
                 <div className="w-full max-w-md space-y-6">
+                    {errorMessage && (
+                        <div
+                            role="alert"
+                            className="rounded-xl border border-red-200/70 bg-red-50 px-4 py-3 text-sm text-red-600"
+                        >
+                            {errorMessage}
+                        </div>
+                    )}
                     <AuthForm />
                     <p className="text-center text-sm text-muted-foreground">
                         By continuing you agree to the OuterCircl community guidelines and privacy

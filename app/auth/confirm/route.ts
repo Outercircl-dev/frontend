@@ -1,70 +1,107 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { getUserAuthState, getRedirectUrlForState } from "@/lib/auth-state-machine";
+import type { BackendMeResponse } from "@/lib/types/auth";
+import type { Session } from "@supabase/supabase-js";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
-
-interface BackendMeResponse {
-    id: string;
-    supabaseUserId: string;
-    email: string;
-    hasOnboarded: boolean;
-    role: string;
-    type?: string;
-}
 
 export async function GET(request: NextRequest) {
     const origin = SITE_URL ?? request.nextUrl.origin
     const requestUrl = new URL(request.url)
     const tokenHash = requestUrl.searchParams.get('token_hash');
-    console.log(`token_hash: ${tokenHash}`)
-    console.log("callback cookies:", request.cookies.getAll().map((c: { name: any; }) => c.name));
     const supabase = await createClient();
-    const { data, error } = await supabase.auth.verifyOtp({
-        token_hash: tokenHash || 'hash',
-        type: 'email'
-    })
-    console.log('User Data: ', data);
-    console.log('User Session: ', data.session?.access_token);
-    const accessToken = data.session?.access_token
-    if (error) {
-        return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error.message)}`, origin))
+
+    let accessToken: string | undefined;
+    let session: Session | undefined;
+
+    // Handle token_hash (OTP verification) - if present, verify OTP
+    if (tokenHash) {
+        const { data, error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'email'
+        })
+
+        if (error) {
+            const url = new URL('/login', origin);
+            url.searchParams.set('error', error.message);
+            return NextResponse.redirect(url);
+        }
+
+        accessToken = data.session?.access_token;
+        session = data.session ?? undefined;
+    } else {
+        // No token_hash - this should not happen in normal flow
+        // Redirect to login with authentication error
+        const url = new URL('/login', origin);
+        url.searchParams.set('error', 'Authentication Unsuccessful');
+        return NextResponse.redirect(url);
     }
-    let redirectUrl = new URL('/onboarding/profile', origin)
-    const response = NextResponse.redirect(redirectUrl, { status: 302 })
+
+    // Default redirect destination path
+    let redirectPath = '/onboarding/profile'
+
+    // Call backend /me to get user info and determine redirect (per architect review)
     if (accessToken && API_URL) {
         try {
-            // Call backend /me to get user info (per architect review)
-            const backendResponse = await fetch(`${API_URL}/me`, {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+            const backendResponse = await fetch(`${API_URL}/api/me`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                     'Content-Type': 'application/json',
                 },
+                signal: controller.signal,
             });
+
+            clearTimeout(timeoutId);
 
             if (backendResponse.ok) {
                 const userData: BackendMeResponse = await backendResponse.json();
-                console.log('########## BE Response #################', userData)
 
-                // Determine redirect based on hasOnboarded from backend
-                if (userData.hasOnboarded) {
-                    redirectUrl = new URL('/feed', origin)
-                }
-                // else: stay with default /onboarding/profile
+                // Use state machine to determine redirect (consistent with /api/v1/auth/me)
+                // Get email verification status from the existing Supabase session
+                const emailVerified = session?.user?.email_confirmed_at !== null;
+                const profileCompleted = userData.hasOnboarded; // Use hasOnboarded from backend
+                const authState = getUserAuthState(emailVerified, profileCompleted);
+                redirectPath = getRedirectUrlForState(authState);
             } else {
-                console.error('Backend /me failed in callback:', backendResponse.status);
-                // On backend error, default to onboarding (safe fallback)
+                // Backend /me failed
+                if (backendResponse.status === 401) {
+                    // Authentication failed - token invalid, redirect to login
+                    const url = new URL('/login', origin);
+                    url.searchParams.set('error', 'Authentication failed');
+                    return NextResponse.redirect(url);
+                } else {
+                    // Service error (500, 503, etc.) - for new users completing magic link,
+                    // allow onboarding as fallback (backend might be temporarily down)
+                    // Note: Proxy still enforces strict error handling for authenticated users
+                    console.warn('Backend /me failed in auth/confirm, defaulting to onboarding:', backendResponse.status);
+                    // Keep default redirectPath = '/onboarding/profile'
+                }
             }
         } catch (err) {
-            console.error('Error calling backend /me in callback:', err);
-            // On error, default to onboarding (safe fallback)
+            // Network/timeout error - for new users, default to onboarding as fallback
+            // (Backend might be temporarily unavailable, but user should be able to try onboarding)
+            console.warn('Error calling backend /me in auth/confirm, defaulting to onboarding:', err);
+            // Keep default redirectPath = '/onboarding/profile'
         }
     } else {
-        console.warn('No access token or API_URL, defaulting to onboarding');
+        // Missing access token or API_URL - redirect to login with error
+        // Distinguish between auth failure (missing accessToken) vs config error (missing API_URL)
+        const errorMsg = !accessToken
+            ? 'Authentication+failed'
+            : 'Configuration+error';
+        const url = new URL('/login', origin);
+        url.searchParams.set('error', errorMsg);
+        return NextResponse.redirect(url);
     }
 
-    // Update redirect target on the existing response so Supabase-set cookies remain attached
-    response.headers.set('Location', redirectUrl.toString())
-    return response
+    // Create redirect response with computed path
+    // Supabase cookies are already set via createClient() server function's cookie handling
+    const redirectUrl = new URL(redirectPath, origin);
+    return NextResponse.redirect(redirectUrl);
 }

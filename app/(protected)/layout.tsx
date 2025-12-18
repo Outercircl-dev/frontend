@@ -32,7 +32,7 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
     if (isLoading) return; // Wait for auth data
 
     if (error || !state) {
-      router.push('/auth/login');
+      router.push('/login');
       return;
     }
 
