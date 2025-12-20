@@ -1,26 +1,17 @@
 'use server'
 
-import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
 import { completeProfileSchema } from '@/lib/validations/profile'
 import type { ProfileFormState } from '@/lib/types/profile'
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export async function completeProfileAction(
   _prevState: ProfileFormState,
   formData: FormData
 ): Promise<ProfileFormState> {
-  // const supabase = createServerActionClient(await cookies())
-
-  // Get current user
-  // const {
-  //   data: { user },
-  //   error: authError,
-  // } = await supabase.auth.getUser()
-
-  // if (authError || !user) {
-  //   return { status: 'error', message: 'You must be logged in to complete your profile' }
-  // }
 
   // Parse form data
   const rawData = {
@@ -58,37 +49,68 @@ export async function completeProfileAction(
 
   const profilePictureUrl = formData.get('profilePictureUrl') as string | null
 
-  // Upsert profile
-  // const { error: dbError } = await supabase.from('user_profiles').upsert(
-  //   {
-  //     user_id: user.id,
-  //     full_name: parsed.data.fullName,
-  //     date_of_birth: parsed.data.dateOfBirth,
-  //     gender: parsed.data.gender,
-  //     profile_picture_url: profilePictureUrl || null,
-  //     bio: parsed.data.bio || null,
-  //     interests: parsed.data.interests,
-  //     hobbies: parsed.data.hobbies || [],
-  //     availability: parsed.data.availability || {},
-  //     distance_radius_km: parsed.data.distanceRadiusKm,
-  //     accepted_tos: true,
-  //     accepted_guidelines: true,
-  //     accepted_tos_at: new Date().toISOString(),
-  //     accepted_guidelines_at: new Date().toISOString(),
-  //     profile_completed: true,
-  //   },
-  //   {
-  //     onConflict: 'user_id',
-  //   }
-  // )
+  // Get Supabase session (for access token) - this is server-side, not direct client communication
+  const supabase = await createClient()
+  const { data: sessionData } = await supabase.auth.getSession()
+  const accessToken = sessionData.session?.access_token
 
-  // if (dbError) {
-  //   console.error('Profile save error:', dbError)
-  //   return {
-  //     status: 'error',
-  //     message: 'Failed to save profile. Please try again.',
-  //   }
-  // }
+  if (!accessToken) {
+    return { status: 'error', message: 'You must be logged in to complete your profile' }
+  }
+
+  // Prepare profile data for backend
+  const profileData = {
+    full_name: parsed.data.fullName,
+    date_of_birth: parsed.data.dateOfBirth,
+    gender: parsed.data.gender,
+    profile_picture_url: profilePictureUrl || null,
+    bio: parsed.data.bio || null,
+    interests: parsed.data.interests,
+    hobbies: parsed.data.hobbies || [],
+    availability: parsed.data.availability || {},
+    distance_radius_km: parsed.data.distanceRadiusKm,
+    accepted_tos: true,
+    accepted_guidelines: true,
+    accepted_tos_at: new Date().toISOString(),
+    accepted_guidelines_at: new Date().toISOString(),
+    profile_completed: true,
+  }
+
+  // Call backend API directly (following architecture pattern)
+  if (!API_URL) {
+    console.error('NEXT_PUBLIC_API_URL is not configured')
+    return {
+      status: 'error',
+      message: 'Backend URL not configured',
+    }
+  }
+
+  try {
+    const backendResponse = await fetch(`${API_URL}/api/profile`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(profileData),
+      cache: 'no-store',
+    })
+
+    if (!backendResponse.ok) {
+      const errorText = await backendResponse.text()
+      console.error('Backend /api/profile POST error:', backendResponse.status, errorText)
+      return {
+        status: 'error',
+        message: 'Failed to save profile. Please try again.',
+      }
+    }
+  } catch (error) {
+    console.error('Profile save error:', error)
+    return {
+      status: 'error',
+      message: 'Failed to save profile. Please try again.',
+    }
+  }
 
   revalidatePath('/feed')
   redirect('/feed')
@@ -99,17 +121,15 @@ export async function saveProfileStepAction(
   step: number,
   data: Record<string, unknown>
 ): Promise<ProfileFormState> {
-  // const supabase = createServerActionClient(await cookies())
+  // Get Supabase session (for access token) - this is server-side, not direct client communication
+  const supabase = await createClient()
+  const { data: sessionData } = await supabase.auth.getSession()
+  const accessToken = sessionData.session?.access_token
 
-  // const {
-  //   data: { user },
-  //   error: authError,
-  // } = await supabase.auth.getUser()
-
-  // if (authError || !user) {
-  //   console.error('Auth error in saveProfileStepAction:', authError)
-  //   return { status: 'error', message: 'You must be logged in' }
-  // }
+  if (!accessToken) {
+    console.error('Auth error in saveProfileStepAction: No access token')
+    return { status: 'error', message: 'You must be logged in' }
+  }
 
   // Build update object based on step
   let updateData: Record<string, unknown> = {}
@@ -166,52 +186,46 @@ export async function saveProfileStepAction(
       break
   }
 
-  // console.log('Saving profile data for user:', user.id, 'Step:', step)
+  console.log('Saving profile data - Step:', step)
   console.log('Update data:', JSON.stringify(updateData, null, 2))
 
-  // Check if profile exists
-  // const { data: existingProfile, error: checkError } = await supabase
-  //   .from('user_profiles')
-  //   .select('id')
-  //   .eq('user_id', user.id)
-  //   .single()
+  // Prepare profile data - if inserting new, include required fields
+  const profileData = {
+    full_name: (data.fullName as string) || 'New User',
+    date_of_birth: (data.dateOfBirth as string) || '2000-01-01',
+    gender: (data.gender as string) || 'prefer_not_to_say',
+    interests: (data.interests as string[]) || [],
+    ...updateData,
+  }
 
-  // if (checkError && checkError.code !== 'PGRST116') {
-  //   console.error('Error checking existing profile:', checkError)
-  // }
+  // Call backend API directly (following architecture pattern)
+  if (!API_URL) {
+    console.error('NEXT_PUBLIC_API_URL is not configured')
+    return { status: 'error', message: 'Backend URL not configured' }
+  }
 
-  // let error
+  try {
+    const backendResponse = await fetch(`${API_URL}/api/profile`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(profileData),
+      cache: 'no-store',
+    })
 
-  // if (existingProfile) {
-  //   // Update existing profile
-  //   console.log('Updating existing profile:', existingProfile.id)
-  //   const result = await supabase
-  //     .from('user_profiles')
-  //     .update(updateData)
-  //     .eq('user_id', user.id)
-  //   error = result.error
-  // } else {
-  //   // Insert new profile with required fields
-  //   console.log('Inserting new profile for user:', user.id)
-  //   const insertData = {
-  //     user_id: user.id,
-  //     full_name: (data.fullName as string) || 'New User',
-  //     date_of_birth: (data.dateOfBirth as string) || '2000-01-01',
-  //     gender: (data.gender as string) || 'prefer_not_to_say',
-  //     interests: (data.interests as string[]) || [],
-  //     ...updateData,
-  //   }
-  //   console.log('Insert data:', JSON.stringify(insertData, null, 2))
-  //   const result = await supabase.from('user_profiles').insert(insertData)
-  //   error = result.error
-  // }
+    if (!backendResponse.ok) {
+      const errorText = await backendResponse.text()
+      console.error('Backend /api/profile PUT error:', backendResponse.status, errorText)
+      return { status: 'error', message: 'Failed to save profile step' }
+    }
 
-  // if (error) {
-  //   console.error('Save profile step error:', error)
-  //   return { status: 'error', message: `Failed to save: ${error.message}` }
-  // }
-
-  console.log('Profile saved successfully!')
-  return { status: 'success', message: 'Progress saved' }
+    console.log('Profile saved successfully!')
+    return { status: 'success', message: 'Progress saved' }
+  } catch (error) {
+    console.error('Save profile step error:', error)
+    return { status: 'error', message: error instanceof Error ? error.message : 'Failed to save profile step' }
+  }
 }
 
