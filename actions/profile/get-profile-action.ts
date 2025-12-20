@@ -1,45 +1,64 @@
 'use server'
 
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
 import type { UserProfile } from '@/lib/types/profile'
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export interface GetProfileResult {
   profile: UserProfile | null
   error: string | null
 }
 
-// export async function getProfileAction(): Promise<GetProfileResult> {
-//   const cookieStore = await cookies()
-//   const supabase = createServerActionClient(cookieStore)
+export async function getProfileAction(): Promise<GetProfileResult> {
+  try {
+    // Get Supabase session (for access token) - this is server-side, not direct client communication
+    const supabase = await createClient()
+    const { data: sessionData } = await supabase.auth.getSession()
+    const accessToken = sessionData.session?.access_token
 
-//   // Get current user
-//   const {
-//     data: { user },
-//     error: authError,
-//   } = await supabase.auth.getUser()
+    if (!accessToken) {
+      return { profile: null, error: 'Not authenticated' }
+    }
 
-//   if (authError || !user) {
-//     return { profile: null, error: 'Not authenticated' }
-//   }
+    // Call backend API directly (following architecture pattern)
+    if (!API_URL) {
+      console.error('NEXT_PUBLIC_API_URL is not configured for profile fetch')
+      return { profile: null, error: 'Backend URL not configured' }
+    }
 
-//   // Fetch profile
-//   const { data, error } = await supabase
-//     .from('user_profiles')
-//     .select('*')
-//     .eq('user_id', user.id)
-//     .single()
+    const backendResponse = await fetch(`${API_URL}/api/profile`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store',
+    })
 
-//   // PGRST116 means no rows found - not an error for us
-//   if (error && error.code !== 'PGRST116') {
-//     console.error('Get profile error:', error)
-//     return { profile: null, error: error.message }
-//   }
+    if (!backendResponse.ok) {
+      if (backendResponse.status === 401) {
+        return { profile: null, error: 'Not authenticated' }
+      }
+      if (backendResponse.status === 404) {
+        // Profile doesn't exist yet - not an error
+        return { profile: null, error: null }
+      }
+      const errorText = await backendResponse.text()
+      console.error('Backend /api/profile error:', backendResponse.status, errorText)
+      return { profile: null, error: 'Failed to fetch profile from backend' }
+    }
 
-//   return { profile: data, error: null }
-// }
+    const profileData = await backendResponse.json()
+    return { profile: profileData, error: null }
+  } catch (error) {
+    console.error('Get profile error:', error)
+    return { profile: null, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+}
 
-// export async function checkProfileCompleted(): Promise<boolean> {
-//   const { profile } = await getProfileAction()
-//   return profile?.profile_completed ?? false
-// }
+export async function checkProfileCompleted(): Promise<boolean> {
+  const { profile } = await getProfileAction()
+  return profile?.profile_completed ?? false
+}
 
