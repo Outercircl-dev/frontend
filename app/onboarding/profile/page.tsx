@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, FormProvider } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import Image from 'next/image'
 
 import { Card, CardContent } from '@/components/ui/card'
@@ -15,7 +16,7 @@ import {
 } from '@/components/onboarding'
 import { getInterestsAction } from '@/actions/profile'
 import { saveProfileFromClient } from '@/lib/supabase/client-actions'
-import { defaultProfileValues } from '@/lib/validations/profile'
+import { defaultProfileValues, completeProfileSchema } from '@/lib/validations/profile'
 import type { OnboardingFormData, InterestCategory } from '@/lib/types/profile'
 
 export default function OnboardingProfilePage() {
@@ -26,6 +27,7 @@ export default function OnboardingProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const form = useForm<OnboardingFormData>({
+    resolver: zodResolver(completeProfileSchema),
     defaultValues: defaultProfileValues,
     mode: 'onBlur',
   })
@@ -41,8 +43,16 @@ export default function OnboardingProfilePage() {
     loadInterests()
   }, [])
 
-  const handleNext = () => {
-    // Just move to next step - we'll save everything at the end
+  const handleNext = async () => {
+    // Validate step 1 before allowing progression
+    if (currentStep === 1) {
+      const isValid = await form.trigger(['fullName', 'dateOfBirth', 'gender'])
+      if (!isValid) {
+        // Validation failed - don't proceed to next step
+        return
+      }
+    }
+    // Move to next step only if validation passes (or if not on step 1)
     setCurrentStep((prev) => Math.min(prev + 1, 4))
   }
 
