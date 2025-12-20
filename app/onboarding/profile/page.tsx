@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, FormProvider } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import Image from 'next/image'
 
 import { Card, CardContent } from '@/components/ui/card'
@@ -16,7 +15,12 @@ import {
 } from '@/components/onboarding'
 import { getInterestsAction } from '@/actions/profile'
 import { saveProfileFromClient } from '@/lib/supabase/client-actions'
-import { defaultProfileValues, completeProfileSchema } from '@/lib/validations/profile'
+import {
+  defaultProfileValues,
+  basicInfoSchema,
+  interestsSchema,
+  preferencesSchema,
+} from '@/lib/validations/profile'
 import type { OnboardingFormData, InterestCategory } from '@/lib/types/profile'
 
 export default function OnboardingProfilePage() {
@@ -27,9 +31,7 @@ export default function OnboardingProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const form = useForm<OnboardingFormData>({
-    resolver: zodResolver(completeProfileSchema),
     defaultValues: defaultProfileValues,
-    mode: 'onBlur',
   })
 
   useEffect(() => {
@@ -44,15 +46,78 @@ export default function OnboardingProfilePage() {
   }, [])
 
   const handleNext = async () => {
-    // Validate step 1 before allowing progression
+    // Per-step validation - only validate fields for the current step
     if (currentStep === 1) {
+      // Validate step 1: Basic Info fields using Zod schema
+      const formData = form.getValues()
+      const step1Data = {
+        fullName: formData.fullName,
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender,
+      }
+      const result = basicInfoSchema.safeParse(step1Data)
+      if (!result.success) {
+        // Set errors for the fields that failed validation
+        result.error.errors.forEach((error) => {
+          form.setError(error.path[0] as keyof OnboardingFormData, {
+            type: 'manual',
+            message: error.message,
+          })
+        })
+        return
+      }
+      // Also trigger form validation to ensure React Hook Form state is updated
       const isValid = await form.trigger(['fullName', 'dateOfBirth', 'gender'])
       if (!isValid) {
-        // Validation failed - don't proceed to next step
+        return
+      }
+    } else if (currentStep === 2) {
+      // Validate step 2: Interests using Zod schema
+      const formData = form.getValues()
+      const step2Data = {
+        interests: formData.interests,
+      }
+      const result = interestsSchema.safeParse(step2Data)
+      if (!result.success) {
+        result.error.errors.forEach((error) => {
+          form.setError(error.path[0] as keyof OnboardingFormData, {
+            type: 'manual',
+            message: error.message,
+          })
+        })
+        return
+      }
+      // Also trigger form validation to ensure React Hook Form state is updated
+      const isValid = await form.trigger(['interests'])
+      if (!isValid) {
+        return
+      }
+    } else if (currentStep === 3) {
+      // Validate step 3: Preferences using Zod schema
+      const formData = form.getValues()
+      const step3Data = {
+        distanceRadiusKm: formData.distanceRadiusKm,
+        availability: formData.availability,
+        bio: formData.bio,
+        hobbies: formData.hobbies,
+      }
+      const result = preferencesSchema.safeParse(step3Data)
+      if (!result.success) {
+        result.error.errors.forEach((error) => {
+          form.setError(error.path[0] as keyof OnboardingFormData, {
+            type: 'manual',
+            message: error.message,
+          })
+        })
+        return
+      }
+      // Also trigger form validation to ensure React Hook Form state is updated
+      const isValid = await form.trigger(['distanceRadiusKm', 'availability'])
+      if (!isValid) {
         return
       }
     }
-    // Move to next step only if validation passes (or if not on step 1)
+    // Move to next step only if validation passes
     setCurrentStep((prev) => Math.min(prev + 1, 4))
   }
 
