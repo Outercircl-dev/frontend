@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { CalendarDays, MapPin, Settings, LogOut, CheckCircle, User, Calendar, Heart } from 'lucide-react'
 
 import { getProfileAction } from '@/actions/profile'
+import type { Availability } from '@/lib/types/profile'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -86,7 +87,7 @@ export default async function FeedPage() {
      })
    }
 
-   const formatAvailability = (availability: Record<string, boolean> | null) => {
+   const formatAvailability = (availability: Availability | null | undefined) => {
      if (!availability) return []
      const labels: Record<string, string> = {
        weekday_morning: 'Weekday Mornings',
@@ -95,7 +96,7 @@ export default async function FeedPage() {
        weekend_anytime: 'Weekend Anytime',
      }
      return Object.entries(availability)
-       .filter(([, value]) => value)
+       .filter(([, value]) => value === true)
        .map(([key]) => labels[key] || key)
    }
 
