@@ -1,8 +1,9 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { buildApiUrl } from '@/lib/utils/api-url'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.API_URL
 
 export interface UploadAvatarResult {
   url: string | null
@@ -74,7 +75,7 @@ export async function uploadAvatarAction(formData: FormData): Promise<UploadAvat
 //     return { url: null, error: 'Failed to upload avatar. Please try again.' }
 //   }
 
-//     const file = formData.get('avatar') as File | null
+  const file = formData.get('avatar') as File | null
 
   if (!file) {
     return { url: null, error: 'No file provided' }
@@ -127,7 +128,7 @@ export async function uploadAvatarAction(formData: FormData): Promise<UploadAvat
   // Update user profile with new avatar URL via backend API
   if (API_URL) {
     try {
-      await fetch(`${API_URL}/api/profile`, {
+      const updateResponse = await fetch(buildApiUrl(API_URL, 'profile'), {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -136,9 +137,16 @@ export async function uploadAvatarAction(formData: FormData): Promise<UploadAvat
         body: JSON.stringify({ profile_picture_url: publicUrl }),
         cache: 'no-store',
       })
+
+      if (!updateResponse.ok) {
+        console.warn('Avatar uploaded but profile update failed:', updateResponse.status)
+        // Return partial success - file uploaded but profile not updated
+        return { url: publicUrl, error: 'Avatar uploaded but profile update failed' }
+      }
     } catch (error) {
       console.error('Failed to update profile with avatar URL:', error)
-      // Still return success since file was uploaded
+      // Return partial success - file uploaded but profile update failed
+      return { url: publicUrl, error: 'Avatar uploaded but profile update failed' }
     }
   }
 
@@ -183,7 +191,7 @@ export async function deleteAvatarAction(): Promise<{ success: boolean; error: s
   // Clear profile picture URL via backend API
   if (API_URL) {
     try {
-      await fetch(`${API_URL}/api/profile`, {
+      const updateResponse = await fetch(buildApiUrl(API_URL, 'profile'), {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -192,9 +200,16 @@ export async function deleteAvatarAction(): Promise<{ success: boolean; error: s
         body: JSON.stringify({ profile_picture_url: null }),
         cache: 'no-store',
       })
+
+      if (!updateResponse.ok) {
+        console.warn('Avatar deleted but profile update failed:', updateResponse.status)
+        // Return partial success - file deleted but profile not updated
+        return { success: false, error: 'Avatar deleted but profile update failed' }
+      }
     } catch (error) {
       console.error('Failed to update profile to remove avatar URL:', error)
-      // Still return success since file was deleted
+      // Return partial failure - file deleted but profile not updated
+      return { success: false, error: 'Avatar deleted but profile update failed' }
     }
   }
 

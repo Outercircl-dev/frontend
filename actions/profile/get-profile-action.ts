@@ -2,8 +2,10 @@
 
 import { createClient } from '@/lib/supabase/server'
 import type { UserProfile } from '@/lib/types/profile'
+import { userProfileSchema } from '@/lib/validations/profile'
+import { buildApiUrl } from '@/lib/utils/api-url'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.API_URL
 
 export interface GetProfileResult {
   profile: UserProfile | null
@@ -23,11 +25,11 @@ export async function getProfileAction(): Promise<GetProfileResult> {
 
     // Call backend API directly (following architecture pattern)
     if (!API_URL) {
-      console.error('NEXT_PUBLIC_API_URL is not configured for profile fetch')
+      console.error('API_URL is not configured for profile fetch')
       return { profile: null, error: 'Backend URL not configured' }
     }
 
-    const backendResponse = await fetch(`${API_URL}/api/profile`, {
+    const backendResponse = await fetch(buildApiUrl(API_URL, 'profile'), {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -50,7 +52,15 @@ export async function getProfileAction(): Promise<GetProfileResult> {
     }
 
     const profileData = await backendResponse.json()
-    return { profile: profileData, error: null }
+    
+    // Validate the response matches expected UserProfile shape
+    const validationResult = userProfileSchema.safeParse(profileData)
+    if (!validationResult.success) {
+      console.error('Invalid profile data received from backend:', validationResult.error)
+      return { profile: null, error: 'Invalid profile data received from backend' }
+    }
+    
+    return { profile: validationResult.data as UserProfile, error: null }
   } catch (error) {
     console.error('Get profile error:', error)
     return { profile: null, error: error instanceof Error ? error.message : 'Unknown error' }

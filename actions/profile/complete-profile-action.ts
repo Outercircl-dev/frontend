@@ -5,8 +5,9 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { completeProfileSchema } from '@/lib/validations/profile'
 import type { ProfileFormState } from '@/lib/types/profile'
+import { buildApiUrl } from '@/lib/utils/api-url'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.API_URL
 
 export async function completeProfileAction(
   _prevState: ProfileFormState,
@@ -78,7 +79,7 @@ export async function completeProfileAction(
 
   // Call backend API directly (following architecture pattern)
   if (!API_URL) {
-    console.error('NEXT_PUBLIC_API_URL is not configured')
+      console.error('API_URL is not configured')
     return {
       status: 'error',
       message: 'Backend URL not configured',
@@ -86,7 +87,7 @@ export async function completeProfileAction(
   }
 
   try {
-    const backendResponse = await fetch(`${API_URL}/api/profile`, {
+    const backendResponse = await fetch(buildApiUrl(API_URL, 'profile'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -200,12 +201,12 @@ export async function saveProfileStepAction(
 
   // Call backend API directly (following architecture pattern)
   if (!API_URL) {
-    console.error('NEXT_PUBLIC_API_URL is not configured')
+      console.error('API_URL is not configured')
     return { status: 'error', message: 'Backend URL not configured' }
   }
 
   try {
-    const backendResponse = await fetch(`${API_URL}/api/profile`, {
+    const backendResponse = await fetch(buildApiUrl(API_URL, 'profile'), {
       method: 'PUT',
       headers: {
         Authorization: `Bearer ${accessToken}`,

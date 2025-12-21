@@ -53,7 +53,8 @@ export default async function FeedPage() {
 
   // If no profile or error, redirect to onboarding
   if (profileError || !profile) {
-    console.log('Feed: No profile found, redirecting to onboarding. Error:', profileError)
+    // Log generic message without exposing sensitive error details
+    console.warn('Feed: No profile found, redirecting to onboarding')
     redirect('/onboarding/profile')
   }
 

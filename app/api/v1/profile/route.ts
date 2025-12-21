@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { buildApiUrl } from '@/lib/utils/api-url';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-    const backendResponse = await fetch(`${API_URL}/api/profile`, {
+    const backendResponse = await fetch(buildApiUrl(API_URL, 'profile'), {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout for POST
 
-    const backendResponse = await fetch(`${API_URL}/api/profile`, {
+    const backendResponse = await fetch(buildApiUrl(API_URL, 'profile'), {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -214,7 +215,7 @@ export async function PUT(request: NextRequest) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout for PUT
 
-    const backendResponse = await fetch(`${API_URL}/api/profile`, {
+    const backendResponse = await fetch(buildApiUrl(API_URL, 'profile'), {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${accessToken}`,

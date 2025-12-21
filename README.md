@@ -1,8 +1,37 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Environment Variables
+
+### Backend API Configuration
+
+**Important:** Both `API_URL` and `NEXT_PUBLIC_API_URL` must be set to the backend root URL **WITHOUT** a trailing `/api`.
+
+Example:
+```
+API_URL=https://backend.example.com
+NEXT_PUBLIC_API_URL=https://backend.example.com
+```
+
+The code automatically appends `/api` to construct full endpoint URLs:
+- `${API_URL}/api/profile`
+- `${API_URL}/api/interests`
+- `${API_URL}/api/me`
+
+**Why two variables?**
+- `API_URL`: Server-only variable used in server actions (not exposed to client)
+- `NEXT_PUBLIC_API_URL`: Client-accessible variable used in API routes
+
+See `.env.example` for a complete list of required environment variables.
+
 ## Getting Started
 
-First, run the development server:
+First, copy the example environment file:
+
+```bash
+cp .env.example .env.local
+```
+
+Then, run the development server:
 
 ```bash
 npm run dev
