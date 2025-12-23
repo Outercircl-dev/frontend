@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getRedirectUrlForState, getUserAuthState } from '@/lib/auth-state-machine';
 import { BackendMeResponse, SubscriptionTier } from '@/lib/types/auth';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = process.env.API_URL;
 
 /**
  * Response shape for frontend consumption
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     // 4. Call backend /me endpoint with Bearer token
     if (!API_URL) {
-      console.error('NEXT_PUBLIC_API_URL is not configured');
+      console.error('API_URL is not configured');
       return NextResponse.json(
         { error: 'Internal Server Error', message: 'Backend URL not configured' },
         { status: 500 }

@@ -51,6 +51,7 @@ export interface ProfileFormState {
   status: 'idle' | 'loading' | 'success' | 'error'
   message: string
   errors?: Record<string, string[]>
+  data?: unknown
 }
 
 // Onboarding step types

@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useForm, FormProvider } from 'react-hook-form'
 import Image from 'next/image'
 
@@ -14,16 +13,25 @@ import {
   GuidelinesStep,
 } from '@/components/onboarding'
 import { getInterestsAction } from '@/actions/profile'
-import { saveProfileFromClient } from '@/lib/supabase/client-actions'
+import { completeProfileAction } from '@/actions/profile/complete-profile-action'
 import { defaultProfileValues } from '@/lib/validations/profile'
-import type { OnboardingFormData, InterestCategory } from '@/lib/types/profile'
+import type {
+  OnboardingFormData,
+  InterestCategory,
+  ProfileFormState,
+  UserProfile,
+} from '@/lib/types/profile'
 
 export default function OnboardingProfilePage() {
-  const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [categories, setCategories] = useState<InterestCategory[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formState, setFormState] = useState<ProfileFormState>({
+    status: 'idle',
+    message: '',
+  })
+  const [savedProfile, setSavedProfile] = useState<UserProfile | null>(null)
 
   const form = useForm<OnboardingFormData>({
     defaultValues: defaultProfileValues,
@@ -51,39 +59,91 @@ export default function OnboardingProfilePage() {
   }
 
   const handleSubmit = async () => {
+    const isValid = await form.trigger()
+    if (!isValid) {
+      setFormState({
+        status: 'error',
+        message: 'Please fix the highlighted fields before submitting.',
+      })
+      return
+    }
+
     setIsSubmitting(true)
-    // try {
-    //   const data = form.getValues()
+    setFormState({
+      status: 'loading',
+      message: 'Saving your profile...',
+      errors: undefined,
+    })
+    try {
+      const data = form.getValues()
+      const formData = new FormData()
+      formData.append('fullName', data.fullName.trim())
+      formData.append('dateOfBirth', data.dateOfBirth)
+      formData.append('gender', data.gender)
+      if (data.profilePictureUrl) {
+        formData.append('profilePictureUrl', data.profilePictureUrl)
+      }
+      data.interests.forEach((interest) => formData.append('interests', interest))
+      formData.append('bio', data.bio || '')
+      data.hobbies.forEach((hobby) => formData.append('hobbies', hobby))
+      formData.append('distanceRadiusKm', String(data.distanceRadiusKm || 25))
+      formData.append('weekday_morning', String(data.availability?.weekday_morning ?? false))
+      formData.append('weekday_afternoon', String(data.availability?.weekday_afternoon ?? false))
+      formData.append('weekday_evening', String(data.availability?.weekday_evening ?? false))
+      formData.append('weekend_anytime', String(data.availability?.weekend_anytime ?? false))
+      formData.append('acceptedTos', String(data.acceptedTos))
+      formData.append('acceptedGuidelines', String(data.acceptedGuidelines))
+      formData.append('confirmedAge', String(data.confirmedAge))
+      formData.append('confirmedPlatonic', String(data.confirmedPlatonic))
 
-    //   // Use client-side save (more reliable for auth)
-    //   const result = await saveProfileFromClient({
-    //     fullName: data.fullName,
-    //     dateOfBirth: data.dateOfBirth,
-    //     gender: data.gender,
-    //     profilePictureUrl: data.profilePictureUrl || null,
-    //     interests: data.interests,
-    //     bio: data.bio || null,
-    //     hobbies: data.hobbies || [],
-    //     distanceRadiusKm: data.distanceRadiusKm || 25,
-    //     availability: data.availability || {},
-    //   })
+      const result = await completeProfileAction(
+        {
+          status: 'idle',
+          message: '',
+        },
+        formData
+      )
 
-    //   if (result.success) {
-    //     router.push('/feed')
-    //   } else {
-    //     console.error('Profile save failed:', result.error)
-    //     alert('Failed to save profile: ' + result.error)
-    //   }
-    // } catch (error) {
-    //   console.error('Submit error:', error)
-    //   alert('An error occurred while saving your profile.')
-    // } finally {
-    //   setIsSubmitting(false)
-    // }
+      if (result.status === 'error') {
+        if (result.errors) {
+          Object.entries(result.errors).forEach(([field, messages]) => {
+            const fieldName = field as keyof OnboardingFormData
+            const message = messages?.[0]
+            if (message) {
+              form.setError(fieldName, { type: 'server', message })
+            }
+          })
+        }
 
-    // 1. Create an endpoint on backend for saving interests
-    // 2. Send a Form Action (follow verify-email-action.ts)
-    // 3. Using form action send the data to backend for storing
+        setFormState({
+          status: 'error',
+          message: result.message,
+          errors: result.errors,
+        })
+        return
+      }
+
+      const profile = (result.data ?? null) as UserProfile | null
+      if (profile) {
+        setSavedProfile(profile)
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('lastProfileResponse', JSON.stringify(profile))
+        }
+      }
+
+      setFormState({
+        status: 'success',
+        message: 'Profile saved successfully!',
+      })
+    } catch (error) {
+      console.error('Submit error:', error)
+      setFormState({
+        status: 'error',
+        message: 'An unexpected error occurred while saving your profile.',
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (isLoading) {
@@ -120,6 +180,31 @@ export default function OnboardingProfilePage() {
         {/* Form Card */}
         <Card className="border-none shadow-xl">
           <CardContent className="p-6 sm:p-8">
+            {formState.status !== 'idle' && (
+              <div
+                className={`mb-4 rounded-lg border p-4 text-sm ${formState.status === 'success'
+                  ? 'border-green-200 bg-green-50 text-green-800'
+                  : formState.status === 'error'
+                    ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                    : 'border-border bg-muted text-muted-foreground'
+                  }`}
+              >
+                <div className="font-medium">
+                  {formState.status === 'success'
+                    ? 'Success'
+                    : formState.status === 'error'
+                      ? 'There was a problem'
+                      : 'Working on it'}
+                </div>
+                <div className="mt-1 text-sm">{formState.message}</div>
+                {formState.status === 'success' && savedProfile && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Saved profile for {savedProfile.full_name}. Ready for the profile page.
+                  </div>
+                )}
+              </div>
+            )}
+
             <FormProvider {...form}>
               <form onSubmit={(e) => e.preventDefault()}>
                 {currentStep === 1 && <BasicInfoStep form={form} onNext={handleNext} />}

@@ -1,32 +1,87 @@
 'use server'
 
 import { cookies } from 'next/headers'
-import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { completeProfileSchema } from '@/lib/validations/profile'
 import type { ProfileFormState } from '@/lib/types/profile'
+
+const PROFILE_API_PATH = '/api/v1/profile'
+const DEFAULT_ERROR = 'Failed to save profile. Please try again.'
+
+async function buildCookieHeader() {
+  const cookieStore = await cookies()
+  const serialized = cookieStore
+    .getAll()
+    .map(({ name, value }: { name: string; value: string }) => `${name}=${value}`)
+    .join('; ')
+  return serialized.length ? serialized : undefined
+}
+
+function buildErrorsMap(details: Array<{ field: string; message: string }>) {
+  return details.reduce<Record<string, string[]>>((acc, detail) => {
+    acc[detail.field] = [...(acc[detail.field] || []), detail.message]
+    return acc
+  }, {})
+}
+
+async function postProfile(payload: Record<string, unknown>): Promise<ProfileFormState> {
+  const cookieHeader = await buildCookieHeader()
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 10_000)
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')
+  const origin = siteUrl || 'http://localhost:3000'
+  const url = new URL(PROFILE_API_PATH, origin).toString()
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader ? { cookie: cookieHeader } : {}),
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+      cache: 'no-store',
+    })
+
+    const contentType = response.headers.get('content-type') || ''
+    const body = contentType.includes('application/json') ? await response.json() : await response.text()
+
+    if (!response.ok) {
+      const details = Array.isArray((body as any)?.details) ? (body as any).details : []
+      return {
+        status: 'error',
+        message: (body as any)?.message || DEFAULT_ERROR,
+        errors: details.length ? buildErrorsMap(details) : undefined,
+      }
+    }
+
+    return {
+      status: 'success',
+      message: 'Profile saved successfully',
+      data: body,
+    }
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return { status: 'error', message: 'Request timed out. Please try again.' }
+    }
+    console.error('completeProfileAction error:', error)
+    return { status: 'error', message: DEFAULT_ERROR }
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
 
 export async function completeProfileAction(
   _prevState: ProfileFormState,
   formData: FormData
 ): Promise<ProfileFormState> {
-  // const supabase = createServerActionClient(await cookies())
-
-  // Get current user
-  // const {
-  //   data: { user },
-  //   error: authError,
-  // } = await supabase.auth.getUser()
-
-  // if (authError || !user) {
-  //   return { status: 'error', message: 'You must be logged in to complete your profile' }
-  // }
-
-  // Parse form data
   const rawData = {
     fullName: formData.get('fullName') as string,
     dateOfBirth: formData.get('dateOfBirth') as string,
     gender: formData.get('gender') as string,
+    profilePictureUrl: (formData.get('profilePictureUrl') as string | null) || null,
     interests: formData.getAll('interests') as string[],
     bio: (formData.get('bio') as string) || '',
     hobbies: (formData.getAll('hobbies') as string[]).filter(Boolean),
@@ -43,7 +98,6 @@ export async function completeProfileAction(
     confirmedPlatonic: formData.get('confirmedPlatonic') === 'true',
   }
 
-  // Validate
   const parsed = completeProfileSchema.safeParse(rawData)
 
   if (!parsed.success) {
@@ -56,162 +110,22 @@ export async function completeProfileAction(
     }
   }
 
-  const profilePictureUrl = formData.get('profilePictureUrl') as string | null
+  const payload = {
+    ...parsed.data,
+    profilePictureUrl: rawData.profilePictureUrl,
+  }
 
-  // Upsert profile
-  // const { error: dbError } = await supabase.from('user_profiles').upsert(
-  //   {
-  //     user_id: user.id,
-  //     full_name: parsed.data.fullName,
-  //     date_of_birth: parsed.data.dateOfBirth,
-  //     gender: parsed.data.gender,
-  //     profile_picture_url: profilePictureUrl || null,
-  //     bio: parsed.data.bio || null,
-  //     interests: parsed.data.interests,
-  //     hobbies: parsed.data.hobbies || [],
-  //     availability: parsed.data.availability || {},
-  //     distance_radius_km: parsed.data.distanceRadiusKm,
-  //     accepted_tos: true,
-  //     accepted_guidelines: true,
-  //     accepted_tos_at: new Date().toISOString(),
-  //     accepted_guidelines_at: new Date().toISOString(),
-  //     profile_completed: true,
-  //   },
-  //   {
-  //     onConflict: 'user_id',
-  //   }
-  // )
-
-  // if (dbError) {
-  //   console.error('Profile save error:', dbError)
-  //   return {
-  //     status: 'error',
-  //     message: 'Failed to save profile. Please try again.',
-  //   }
-  // }
-
-  revalidatePath('/feed')
-  redirect('/feed')
+  return postProfile(payload)
 }
 
-// Simplified version for step-by-step saving
 export async function saveProfileStepAction(
   step: number,
   data: Record<string, unknown>
 ): Promise<ProfileFormState> {
-  // const supabase = createServerActionClient(await cookies())
-
-  // const {
-  //   data: { user },
-  //   error: authError,
-  // } = await supabase.auth.getUser()
-
-  // if (authError || !user) {
-  //   console.error('Auth error in saveProfileStepAction:', authError)
-  //   return { status: 'error', message: 'You must be logged in' }
-  // }
-
-  // Build update object based on step
-  let updateData: Record<string, unknown> = {}
-
-  switch (step) {
-    case 0:
-      // Save ALL data at once (used on final submit)
-      updateData = {
-        full_name: data.fullName,
-        date_of_birth: data.dateOfBirth,
-        gender: data.gender,
-        profile_picture_url: data.profilePictureUrl || null,
-        interests: data.interests || [],
-        bio: data.bio || null,
-        hobbies: data.hobbies || [],
-        distance_radius_km: data.distanceRadiusKm || 25,
-        availability: data.availability || {},
-        accepted_tos: true,
-        accepted_guidelines: true,
-        accepted_tos_at: new Date().toISOString(),
-        accepted_guidelines_at: new Date().toISOString(),
-        profile_completed: true,
-      }
-      break
-    case 1:
-      updateData = {
-        full_name: data.fullName,
-        date_of_birth: data.dateOfBirth,
-        gender: data.gender,
-        profile_picture_url: data.profilePictureUrl || null,
-      }
-      break
-    case 2:
-      updateData = {
-        interests: data.interests,
-      }
-      break
-    case 3:
-      updateData = {
-        bio: data.bio || null,
-        hobbies: data.hobbies || [],
-        distance_radius_km: data.distanceRadiusKm || 25,
-        availability: data.availability || {},
-      }
-      break
-    case 4:
-      updateData = {
-        accepted_tos: true,
-        accepted_guidelines: true,
-        accepted_tos_at: new Date().toISOString(),
-        accepted_guidelines_at: new Date().toISOString(),
-        profile_completed: true,
-      }
-      break
+  // For now, only the final submit (step 0) is supported through the backend.
+  if (step !== 0) {
+    return { status: 'error', message: 'Step saving is not supported. Please submit the full profile.' }
   }
 
-  // console.log('Saving profile data for user:', user.id, 'Step:', step)
-  console.log('Update data:', JSON.stringify(updateData, null, 2))
-
-  // Check if profile exists
-  // const { data: existingProfile, error: checkError } = await supabase
-  //   .from('user_profiles')
-  //   .select('id')
-  //   .eq('user_id', user.id)
-  //   .single()
-
-  // if (checkError && checkError.code !== 'PGRST116') {
-  //   console.error('Error checking existing profile:', checkError)
-  // }
-
-  // let error
-
-  // if (existingProfile) {
-  //   // Update existing profile
-  //   console.log('Updating existing profile:', existingProfile.id)
-  //   const result = await supabase
-  //     .from('user_profiles')
-  //     .update(updateData)
-  //     .eq('user_id', user.id)
-  //   error = result.error
-  // } else {
-  //   // Insert new profile with required fields
-  //   console.log('Inserting new profile for user:', user.id)
-  //   const insertData = {
-  //     user_id: user.id,
-  //     full_name: (data.fullName as string) || 'New User',
-  //     date_of_birth: (data.dateOfBirth as string) || '2000-01-01',
-  //     gender: (data.gender as string) || 'prefer_not_to_say',
-  //     interests: (data.interests as string[]) || [],
-  //     ...updateData,
-  //   }
-  //   console.log('Insert data:', JSON.stringify(insertData, null, 2))
-  //   const result = await supabase.from('user_profiles').insert(insertData)
-  //   error = result.error
-  // }
-
-  // if (error) {
-  //   console.error('Save profile step error:', error)
-  //   return { status: 'error', message: `Failed to save: ${error.message}` }
-  // }
-
-  console.log('Profile saved successfully!')
-  return { status: 'success', message: 'Progress saved' }
+  return postProfile(data)
 }
-
