@@ -113,8 +113,7 @@ export const userProfileSchema = z.object({
       weekday_evening: z.boolean().optional(),
       weekend_anytime: z.boolean().optional(),
     })
-    .optional()
-    .nullable(),
+    .nullish(),
   distance_radius_km: z.number(),
   accepted_tos: z.boolean(),
   accepted_guidelines: z.boolean(),

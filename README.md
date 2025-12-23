@@ -7,7 +7,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 **Important:** Both `API_URL` and `NEXT_PUBLIC_API_URL` must be set to the backend root URL **WITHOUT** a trailing `/api`.
 
 Example:
-```
+```bash
 API_URL=https://backend.example.com
 NEXT_PUBLIC_API_URL=https://backend.example.com
 ```

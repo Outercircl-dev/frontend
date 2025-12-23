@@ -30,51 +30,6 @@ export async function uploadAvatarAction(formData: FormData): Promise<UploadAvat
     return { url: null, error: 'You must be logged in to upload an avatar' }
   }
 
-//   const file = formData.get('avatar') as File | null
-
-//   if (!file) {
-//     return { url: null, error: 'No file provided' }
-//   }
-
-//   // Validate file type
-//   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-//   if (!allowedTypes.includes(file.type)) {
-//     return { url: null, error: 'Invalid file type. Please upload a JPEG, PNG, WebP, or GIF image.' }
-//   }
-
-//   // Validate file size (max 5MB)
-//   const maxSize = 5 * 1024 * 1024 // 5MB
-//   if (file.size > maxSize) {
-//     return { url: null, error: 'File too large. Maximum size is 5MB.' }
-//   }
-
-//   // Generate unique filename
-//   const fileExt = file.name.split('.').pop()
-//   const fileName = `${user.id}/${Date.now()}.${fileExt}`
-
-//   // Delete existing avatar if any
-//   const { data: existingFiles } = await supabase.storage
-//     .from('avatars')
-//     .list(user.id)
-
-//   if (existingFiles && existingFiles.length > 0) {
-//     const filesToDelete = existingFiles.map((f) => `${user.id}/${f.name}`)
-//     await supabase.storage.from('avatars').remove(filesToDelete)
-//   }
-
-//   // Upload new avatar
-//   const { error: uploadError } = await supabase.storage
-//     .from('avatars')
-//     .upload(fileName, file, {
-//       cacheControl: '3600',
-//       upsert: true,
-//     })
-
-//   if (uploadError) {
-//     console.error('Avatar upload error:', uploadError)
-//     return { url: null, error: 'Failed to upload avatar. Please try again.' }
-//   }
-
   const file = formData.get('avatar') as File | null
 
   if (!file) {
