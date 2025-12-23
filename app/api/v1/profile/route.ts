@@ -49,8 +49,11 @@ export async function POST(request: NextRequest) {
 
         if (!backendResponse.ok) {
             const status = backendResponse.status || 500
+            const normalizedError = isJson
+                ? responsePayload
+                : { error: responsePayload || 'Profile save failed' }
             return NextResponse.json(
-                responsePayload ?? { error: 'Profile save failed' },
+                normalizedError,
                 { status }
             )
         }
