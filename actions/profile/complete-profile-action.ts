@@ -29,11 +29,12 @@ async function postProfile(payload: Record<string, unknown>): Promise<ProfileFor
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 10_000)
 
-  const origin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || ''
-  const url = `${origin}${PROFILE_API_PATH}`
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')
+  const origin = siteUrl || 'http://localhost:3000'
+  const url = new URL(PROFILE_API_PATH, origin).toString()
 
   try {
-    const response = await fetch(url || PROFILE_API_PATH, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -43,8 +44,6 @@ async function postProfile(payload: Record<string, unknown>): Promise<ProfileFor
       signal: controller.signal,
       cache: 'no-store',
     })
-
-    clearTimeout(timeoutId)
 
     const contentType = response.headers.get('content-type') || ''
     const body = contentType.includes('application/json') ? await response.json() : await response.text()
@@ -69,6 +68,8 @@ async function postProfile(payload: Record<string, unknown>): Promise<ProfileFor
     }
     console.error('completeProfileAction error:', error)
     return { status: 'error', message: DEFAULT_ERROR }
+  } finally {
+    clearTimeout(timeoutId)
   }
 }
 
