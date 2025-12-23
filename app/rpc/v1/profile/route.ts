@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        console.error('Error in POST /api/v1/profile:', error)
+        console.error('Error in POST /rpc/v1/profile:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
 }

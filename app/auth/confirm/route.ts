@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
             if (backendResponse.ok) {
                 const userData: BackendMeResponse = await backendResponse.json();
 
-                // Use state machine to determine redirect (consistent with /api/v1/auth/me)
+                // Use state machine to determine redirect (consistent with /rpc/v1/auth/me)
                 // Get email verification status from the existing Supabase session
                 const emailVerified = session?.user?.email_confirmed_at !== null;
                 const profileCompleted = userData.hasOnboarded; // Use hasOnboarded from backend

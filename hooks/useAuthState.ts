@@ -57,7 +57,7 @@ export function useAuthState(): UseAuthStateReturn {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/v1/auth/me', {
+      const response = await fetch('/rpc/v1/auth/me', {
         headers: {
           'Content-Type': 'application/json',
         },

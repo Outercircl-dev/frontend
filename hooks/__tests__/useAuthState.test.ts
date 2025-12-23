@@ -21,7 +21,7 @@ describe('useAuthState hook behavior', () => {
   });
 
   describe('API call structure', () => {
-    it('should call /api/v1/auth/me endpoint', async () => {
+    it('should call /rpc/v1/auth/me endpoint', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -32,11 +32,11 @@ describe('useAuthState hook behavior', () => {
         }),
       });
 
-      await fetch('/api/v1/auth/me', {
+      await fetch('/rpc/v1/auth/me', {
         headers: { 'Content-Type': 'application/json' },
       });
 
-      expect(mockFetch).toHaveBeenCalledWith('/api/v1/auth/me', {
+      expect(mockFetch).toHaveBeenCalledWith('/rpc/v1/auth/me', {
         headers: { 'Content-Type': 'application/json' },
       });
     });
@@ -56,7 +56,7 @@ describe('useAuthState hook behavior', () => {
         json: async () => mockResponse,
       });
 
-      const response = await fetch('/api/v1/auth/me', {
+      const response = await fetch('/rpc/v1/auth/me', {
         headers: { 'Content-Type': 'application/json' },
       });
       const data = await response.json();
@@ -81,7 +81,7 @@ describe('useAuthState hook behavior', () => {
         json: async () => mockResponse,
       });
 
-      const response = await fetch('/api/v1/auth/me', {
+      const response = await fetch('/rpc/v1/auth/me', {
         headers: { 'Content-Type': 'application/json' },
       });
       const data = await response.json();
@@ -97,7 +97,7 @@ describe('useAuthState hook behavior', () => {
         status: 401,
       });
 
-      const response = await fetch('/api/v1/auth/me', {
+      const response = await fetch('/rpc/v1/auth/me', {
         headers: { 'Content-Type': 'application/json' },
       });
 
@@ -110,7 +110,7 @@ describe('useAuthState hook behavior', () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
       await expect(
-        fetch('/api/v1/auth/me', {
+        fetch('/rpc/v1/auth/me', {
           headers: { 'Content-Type': 'application/json' },
         })
       ).rejects.toThrow('Network error');

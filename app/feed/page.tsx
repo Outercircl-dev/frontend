@@ -133,7 +133,7 @@ export default async function FeedPage() {
   //               <span className="sr-only">Settings</span>
   //             </Link>
   //           </Button>
-  //           <form action="/api/v1/auth/signout" method="POST">
+  //           <form action="/rpc/v1/auth/signout" method="POST">
   //             <Button variant="ghost" size="icon" type="submit">
   //               <LogOut className="h-5 w-5" />
   //               <span className="sr-only">Sign out</span>

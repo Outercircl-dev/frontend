@@ -128,7 +128,7 @@ export async function updateSession(request: NextRequest) {
             const accessToken = currentSession?.access_token
 
             if (accessToken) {
-                // console.log(`Access Token: ${accessToken}`);
+                console.log(`Access Token: ${accessToken}`);
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout for middleware
 
@@ -145,7 +145,7 @@ export async function updateSession(request: NextRequest) {
 
                 if (backendResponse.ok) {
                     const userData: BackendMeResponse = await backendResponse.json()
-                    // Use state machine to determine redirect (consistent with /api/v1/auth/me)
+                    // Use state machine to determine redirect (consistent with /rpc/v1/auth/me)
                     // Check email verification status from Supabase user; treat undefined as not verified
                     const user = currentSession?.user
                     const emailVerified = Boolean(user && user.email_confirmed_at !== null)
