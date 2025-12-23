@@ -93,7 +93,7 @@ export async function updateSession(request: NextRequest) {
     if (code) {
         // Exchange code for session - this sets cookies via setAll callback
         const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-        
+
         if (error) {
             // On error, redirect to login with error message
             const url = new URL('/login', origin)
@@ -126,8 +126,9 @@ export async function updateSession(request: NextRequest) {
         try {
             const { data: { session: currentSession } } = await supabase.auth.getSession()
             const accessToken = currentSession?.access_token
-            
+
             if (accessToken) {
+                console.log(`Access Token: ${accessToken}`);
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout for middleware
 
