@@ -4,7 +4,7 @@ import { getUserAuthState, getRedirectUrlForState } from "@/lib/auth-state-machi
 import type { BackendMeResponse } from "@/lib/types/auth";
 import type { Session } from "@supabase/supabase-js";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = process.env.API_URL;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
 
 export async function GET(request: NextRequest) {

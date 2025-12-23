@@ -3,7 +3,7 @@
 import type { Interest, InterestCategory } from '@/lib/types/profile'
 import { createClient } from '@/lib/supabase/server'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.API_URL
 
 interface BackendInterestsResponse {
   categories: InterestCategory[]
@@ -72,7 +72,7 @@ function groupInterestsByCategory(interests: Interest[]): InterestCategory[] {
 export async function getInterestsAction(): Promise<GetInterestsResult> {
   try {
     if (!API_URL) {
-      console.error('NEXT_PUBLIC_API_URL is not configured for interests fetch')
+      console.error('API_URL is not configured for interests fetch')
       const categories = groupInterestsByCategory(FALLBACK_INTERESTS)
       return { interests: FALLBACK_INTERESTS, categories, error: 'Backend URL not configured' }
     }

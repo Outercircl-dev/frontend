@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { createClient } from '@/lib/supabase/server'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.API_URL
 
 export async function POST(request: NextRequest) {
     try {
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
         }
 
         if (!API_URL) {
-            console.error('NEXT_PUBLIC_API_URL is not configured for profile save')
+            console.error('API_URL is not configured for profile save')
             return NextResponse.json(
                 { error: 'Internal Server Error', message: 'Backend URL not configured' },
                 { status: 500 }

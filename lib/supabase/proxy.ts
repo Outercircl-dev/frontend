@@ -8,11 +8,11 @@ const PROTECTED_ROUTES = ["/feed", "/settings", "/activities", "/profile", "/onb
 const AUTH_ROUTES = ["/login", "/"];
 const PUBLIC_ROUTES = ["/auth/confirm"];
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.API_URL
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')
 
 if (!API_URL) {
-    throw new Error('NEXT_PUBLIC_API_URL is not set')
+    throw new Error('API_URL is not set')
 }
 
 function getOrigin(request: NextRequest) {
@@ -128,7 +128,7 @@ export async function updateSession(request: NextRequest) {
             const accessToken = currentSession?.access_token
 
             if (accessToken) {
-                console.log(`Access Token: ${accessToken}`);
+                // console.log(`Access Token: ${accessToken}`);
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout for middleware
 
