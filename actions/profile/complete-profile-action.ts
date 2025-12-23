@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 import { completeProfileSchema } from '@/lib/validations/profile'
 import type { ProfileFormState } from '@/lib/types/profile'
 
-const PROFILE_API_PATH = '/api/v1/profile'
+const PROFILE_API_PATH = '/rpc/v1/profile'
 const DEFAULT_ERROR = 'Failed to save profile. Please try again.'
 
 async function buildCookieHeader() {

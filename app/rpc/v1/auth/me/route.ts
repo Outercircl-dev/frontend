@@ -24,7 +24,7 @@ interface AuthMeResponse {
 }
 
 /**
- * GET /api/v1/auth/me
+ * GET /rpc/v1/auth/me
  * 
  * Proxies to NestJS backend /me endpoint.
  * 
@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response, { status: 200 });
 
   } catch (error) {
-    console.error('Error in GET /api/v1/auth/me:', error);
+    console.error('Error in GET /rpc/v1/auth/me:', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }

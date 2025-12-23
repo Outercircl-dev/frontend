@@ -16,6 +16,6 @@ export const config = {
          * - auth callback route
          * - public files (images, etc.)
          */
-        "/((?!_next/static|_next/image|favicon.ico|api|auth/callback|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+        "/((?!_next/static|_next/image|favicon.ico|api|rpc|auth/callback|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
     ],
 }
