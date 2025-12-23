@@ -95,12 +95,43 @@ export const completeProfileSchema = basicInfoSchema
   .merge(preferencesSchema)
   .merge(guidelinesSchema)
 
+// UserProfile schema for API response validation
+export const userProfileSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  full_name: z.string(),
+  date_of_birth: z.string(),
+  gender: z.enum(genderOptions),
+  profile_picture_url: z.string().nullable(),
+  bio: z.string().nullable(),
+  interests: z.array(z.string()),
+  hobbies: z.array(z.string()),
+  availability: z
+    .object({
+      weekday_morning: z.boolean().optional(),
+      weekday_afternoon: z.boolean().optional(),
+      weekday_evening: z.boolean().optional(),
+      weekend_anytime: z.boolean().optional(),
+    })
+    .nullish(),
+  distance_radius_km: z.number(),
+  accepted_tos: z.boolean(),
+  accepted_guidelines: z.boolean(),
+  accepted_tos_at: z.string().nullable(),
+  accepted_guidelines_at: z.string().nullable(),
+  profile_completed: z.boolean(),
+  is_verified: z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string(),
+})
+
 // Type exports
 export type BasicInfoData = z.infer<typeof basicInfoSchema>
 export type InterestsData = z.infer<typeof interestsSchema>
 export type PreferencesData = z.infer<typeof preferencesSchema>
 export type GuidelinesData = z.infer<typeof guidelinesSchema>
 export type CompleteProfileData = z.infer<typeof completeProfileSchema>
+export type UserProfileData = z.infer<typeof userProfileSchema>
 
 // Default values for form initialization (matches OnboardingFormData)
 export const defaultProfileValues = {

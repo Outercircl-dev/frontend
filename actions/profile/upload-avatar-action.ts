@@ -1,117 +1,173 @@
 'use server'
 
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
+import { buildApiUrl } from '@/lib/utils/api-url'
+
+const API_URL = process.env.API_URL
 
 export interface UploadAvatarResult {
   url: string | null
   error: string | null
 }
 
-// export async function uploadAvatarAction(formData: FormData): Promise<UploadAvatarResult> {
-//   const supabase = createServerActionClient(await cookies())
+export async function uploadAvatarAction(formData: FormData): Promise<UploadAvatarResult> {
+  // Get Supabase session (for access token) - this is server-side, not direct client communication
+  const supabase = await createClient()
+  const { data: sessionData } = await supabase.auth.getSession()
+  const accessToken = sessionData.session?.access_token
 
-//   // Get current user
-//   const {
-//     data: { user },
-//     error: authError,
-//   } = await supabase.auth.getUser()
+  if (!accessToken) {
+    return { url: null, error: 'You must be logged in to upload an avatar' }
+  }
 
-//   if (authError || !user) {
-//     return { url: null, error: 'You must be logged in to upload an avatar' }
-//   }
+  // Get current user (for user ID only - needed for file path)
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
 
-//   const file = formData.get('avatar') as File | null
+  if (authError || !user) {
+    return { url: null, error: 'You must be logged in to upload an avatar' }
+  }
 
-//   if (!file) {
-//     return { url: null, error: 'No file provided' }
-//   }
+  const file = formData.get('avatar') as File | null
 
-//   // Validate file type
-//   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-//   if (!allowedTypes.includes(file.type)) {
-//     return { url: null, error: 'Invalid file type. Please upload a JPEG, PNG, WebP, or GIF image.' }
-//   }
+  if (!file) {
+    return { url: null, error: 'No file provided' }
+  }
 
-//   // Validate file size (max 5MB)
-//   const maxSize = 5 * 1024 * 1024 // 5MB
-//   if (file.size > maxSize) {
-//     return { url: null, error: 'File too large. Maximum size is 5MB.' }
-//   }
+  // Validate file type
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (!allowedTypes.includes(file.type)) {
+    return { url: null, error: 'Invalid file type. Please upload a JPEG, PNG, WebP, or GIF image.' }
+  }
 
-//   // Generate unique filename
-//   const fileExt = file.name.split('.').pop()
-//   const fileName = `${user.id}/${Date.now()}.${fileExt}`
+  // Validate file size (max 5MB)
+  const maxSize = 5 * 1024 * 1024 // 5MB
+  if (file.size > maxSize) {
+    return { url: null, error: 'File too large. Maximum size is 5MB.' }
+  }
 
-//   // Delete existing avatar if any
-//   const { data: existingFiles } = await supabase.storage
-//     .from('avatars')
-//     .list(user.id)
+  // Generate unique filename
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${user.id}/${Date.now()}.${fileExt}`
 
-//   if (existingFiles && existingFiles.length > 0) {
-//     const filesToDelete = existingFiles.map((f) => `${user.id}/${f.name}`)
-//     await supabase.storage.from('avatars').remove(filesToDelete)
-//   }
+  // Delete existing avatar if any
+  const { data: existingFiles } = await supabase.storage
+    .from('avatars')
+    .list(user.id)
 
-//   // Upload new avatar
-//   const { error: uploadError } = await supabase.storage
-//     .from('avatars')
-//     .upload(fileName, file, {
-//       cacheControl: '3600',
-//       upsert: true,
-//     })
+  if (existingFiles && existingFiles.length > 0) {
+    const filesToDelete = existingFiles.map((f) => `${user.id}/${f.name}`)
+    await supabase.storage.from('avatars').remove(filesToDelete)
+  }
 
-//   if (uploadError) {
-//     console.error('Avatar upload error:', uploadError)
-//     return { url: null, error: 'Failed to upload avatar. Please try again.' }
-//   }
+  // Upload new avatar
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(fileName, file, {
+      cacheControl: '3600',
+      upsert: true,
+    })
 
-//   // Get public URL
-//   const {
-//     data: { publicUrl },
-//   } = supabase.storage.from('avatars').getPublicUrl(fileName)
+  if (uploadError) {
+    console.error('Avatar upload error:', uploadError)
+    return { url: null, error: 'Failed to upload avatar. Please try again.' }
+  }
 
-//   // Update user profile with new avatar URL
-//   await supabase
-//     .from('user_profiles')
-//     .update({ profile_picture_url: publicUrl })
-//     .eq('user_id', user.id)
+  // Get public URL
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from('avatars').getPublicUrl(fileName)
 
-//   return { url: publicUrl, error: null }
-// }
+  // Update user profile with new avatar URL via backend API
+  if (API_URL) {
+    try {
+      const updateResponse = await fetch(buildApiUrl(API_URL, 'profile'), {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ profile_picture_url: publicUrl }),
+        cache: 'no-store',
+      })
 
-// export async function deleteAvatarAction(): Promise<{ success: boolean; error: string | null }> {
-//   const supabase = createServerActionClient(await cookies())
+      if (!updateResponse.ok) {
+        console.warn('Avatar uploaded but profile update failed:', updateResponse.status)
+        // Return partial success - file uploaded but profile not updated
+        return { url: publicUrl, error: 'Avatar uploaded but profile update failed' }
+      }
+    } catch (error) {
+      console.error('Failed to update profile with avatar URL:', error)
+      // Return partial success - file uploaded but profile update failed
+      return { url: publicUrl, error: 'Avatar uploaded but profile update failed' }
+    }
+  }
 
-//   const {
-//     data: { user },
-//     error: authError,
-//   } = await supabase.auth.getUser()
+  return { url: publicUrl, error: null }
+}
 
-//   if (authError || !user) {
-//     return { success: false, error: 'You must be logged in' }
-//   }
+export async function deleteAvatarAction(): Promise<{ success: boolean; error: string | null }> {
+  // Get Supabase session (for access token) - this is server-side, not direct client communication
+  const supabase = await createClient()
+  const { data: sessionData } = await supabase.auth.getSession()
+  const accessToken = sessionData.session?.access_token
 
-//   // Delete all files in user's avatar folder
-//   const { data: existingFiles } = await supabase.storage
-//     .from('avatars')
-//     .list(user.id)
+  if (!accessToken) {
+    return { success: false, error: 'You must be logged in' }
+  }
 
-//   if (existingFiles && existingFiles.length > 0) {
-//     const filesToDelete = existingFiles.map((f) => `${user.id}/${f.name}`)
-//     const { error } = await supabase.storage.from('avatars').remove(filesToDelete)
+  // Get current user (for user ID only - needed for file path)
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
 
-//     if (error) {
-//       console.error('Delete avatar error:', error)
-//       return { success: false, error: 'Failed to delete avatar' }
-//     }
-//   }
+  if (authError || !user) {
+    return { success: false, error: 'You must be logged in' }
+  }
 
-//   // Clear profile picture URL
-//   await supabase
-//     .from('user_profiles')
-//     .update({ profile_picture_url: null })
-//     .eq('user_id', user.id)
+  // Delete all files in user's avatar folder
+  const { data: existingFiles } = await supabase.storage
+    .from('avatars')
+    .list(user.id)
 
-//   return { success: true, error: null }
-// }
+  if (existingFiles && existingFiles.length > 0) {
+    const filesToDelete = existingFiles.map((f) => `${user.id}/${f.name}`)
+    const { error } = await supabase.storage.from('avatars').remove(filesToDelete)
+
+    if (error) {
+      console.error('Delete avatar error:', error)
+      return { success: false, error: 'Failed to delete avatar' }
+    }
+  }
+
+  // Clear profile picture URL via backend API
+  if (API_URL) {
+    try {
+      const updateResponse = await fetch(buildApiUrl(API_URL, 'profile'), {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ profile_picture_url: null }),
+        cache: 'no-store',
+      })
+
+      if (!updateResponse.ok) {
+        console.warn('Avatar deleted but profile update failed:', updateResponse.status)
+        // Return partial success - file deleted but profile not updated
+        return { success: false, error: 'Avatar deleted but profile update failed' }
+      }
+    } catch (error) {
+      console.error('Failed to update profile to remove avatar URL:', error)
+      // Return partial failure - file deleted but profile not updated
+      return { success: false, error: 'Avatar deleted but profile update failed' }
+    }
+  }
+
+  return { success: true, error: null }
+}
 

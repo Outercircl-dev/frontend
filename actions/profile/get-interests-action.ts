@@ -2,8 +2,9 @@
 
 import type { Interest, InterestCategory } from '@/lib/types/profile'
 import { createClient } from '@/lib/supabase/server'
+import { buildApiUrl } from '@/lib/utils/api-url'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.API_URL
 
 interface BackendInterestsResponse {
   categories: InterestCategory[]
@@ -72,7 +73,7 @@ function groupInterestsByCategory(interests: Interest[]): InterestCategory[] {
 export async function getInterestsAction(): Promise<GetInterestsResult> {
   try {
     if (!API_URL) {
-      console.error('NEXT_PUBLIC_API_URL is not configured for interests fetch')
+      console.error('API_URL is not configured for interests fetch')
       const categories = groupInterestsByCategory(FALLBACK_INTERESTS)
       return { interests: FALLBACK_INTERESTS, categories, error: 'Backend URL not configured' }
     }
@@ -81,7 +82,7 @@ export async function getInterestsAction(): Promise<GetInterestsResult> {
     const { data: sessionData } = await supabase.auth.getSession()
     const accessToken = sessionData.session?.access_token
 
-    const backendResponse = await fetch(`${API_URL}/interests`, {
+    const backendResponse = await fetch(buildApiUrl(API_URL, 'interests'), {
       method: 'GET',
       headers: {
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
