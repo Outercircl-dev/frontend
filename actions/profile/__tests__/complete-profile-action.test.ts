@@ -172,11 +172,10 @@ describe('completeProfileAction', () => {
       expect(callArgs[1].headers['Content-Type']).toBe('application/json')
 
       const body = JSON.parse(callArgs[1].body)
-      expect(body.full_name).toBe('John Doe')
-      expect(body.date_of_birth).toBe('2000-01-01')
-      expect(body.profile_completed).toBe(true)
-      expect(body.accepted_tos).toBe(true)
-      expect(body.accepted_guidelines).toBe(true)
+      expect(body.fullName).toBe('John Doe')
+      expect(body.dateOfBirth).toBe('2000-01-01')
+      expect(body.acceptedTos).toBe(true)
+      expect(body.acceptedGuidelines).toBe(true)
     })
 
     it('should handle backend error response', async () => {

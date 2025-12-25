@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useForm, FormProvider } from 'react-hook-form'
 import Image from 'next/image'
+import { isRedirectError } from 'next/navigation'
 
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -105,6 +106,10 @@ export default function OnboardingProfilePage() {
         message: 'Failed to save profile. Please try again.',
       })
     } catch (error) {
+      // Re-throw redirect errors so Next.js can handle navigation
+      if (isRedirectError(error)) {
+        throw error
+      }
       console.error('Submit error:', error)
       setFormState({
         status: 'error',

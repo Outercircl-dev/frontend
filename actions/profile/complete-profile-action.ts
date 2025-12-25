@@ -70,8 +70,8 @@ export async function completeProfileAction(
     hobbies: parsed.data.hobbies || [],
     availability: parsed.data.availability || {},
     distanceRadiusKm: parsed.data.distanceRadiusKm,
-    acceptedTos: true,
-    acceptedGuidelines: true,
+    acceptedTos: parsed.data.acceptedTos ?? false,
+    acceptedGuidelines: parsed.data.acceptedGuidelines ?? false,
     confirmedAge: parsed.data.confirmedAge,
     confirmedPlatonic: parsed.data.confirmedPlatonic,
   }
@@ -138,28 +138,27 @@ export async function saveProfileStepAction(
     case 0:
       // Save ALL data at once (used on final submit)
       updateData = {
-        full_name: data.fullName,
-        date_of_birth: data.dateOfBirth,
+        fullName: data.fullName,
+        dateOfBirth: data.dateOfBirth,
         gender: data.gender,
-        profile_picture_url: data.profilePictureUrl || null,
+        profilePictureUrl: data.profilePictureUrl || null,
         interests: data.interests || [],
         bio: data.bio || null,
         hobbies: data.hobbies || [],
-        distance_radius_km: data.distanceRadiusKm || 25,
+        distanceRadiusKm: data.distanceRadiusKm || 25,
         availability: data.availability || {},
-        accepted_tos: true,
-        accepted_guidelines: true,
-        accepted_tos_at: new Date().toISOString(),
-        accepted_guidelines_at: new Date().toISOString(),
-        profile_completed: true,
+        acceptedTos: data.acceptedTos ?? false,
+        acceptedGuidelines: data.acceptedGuidelines ?? false,
+        confirmedAge: data.confirmedAge,
+        confirmedPlatonic: data.confirmedPlatonic,
       }
       break
     case 1:
       updateData = {
-        full_name: data.fullName,
-        date_of_birth: data.dateOfBirth,
+        fullName: data.fullName,
+        dateOfBirth: data.dateOfBirth,
         gender: data.gender,
-        profile_picture_url: data.profilePictureUrl || null,
+        profilePictureUrl: data.profilePictureUrl || null,
       }
       break
     case 2:
@@ -171,17 +170,14 @@ export async function saveProfileStepAction(
       updateData = {
         bio: data.bio || null,
         hobbies: data.hobbies || [],
-        distance_radius_km: data.distanceRadiusKm || 25,
+        distanceRadiusKm: data.distanceRadiusKm || 25,
         availability: data.availability || {},
       }
       break
     case 4:
       updateData = {
-        accepted_tos: true,
-        accepted_guidelines: true,
-        accepted_tos_at: new Date().toISOString(),
-        accepted_guidelines_at: new Date().toISOString(),
-        profile_completed: true,
+        acceptedTos: data.acceptedTos ?? false,
+        acceptedGuidelines: data.acceptedGuidelines ?? false,
       }
       break
   }
@@ -191,8 +187,8 @@ export async function saveProfileStepAction(
 
   // Prepare profile data - if inserting new, include required fields
   const profileData = {
-    full_name: (data.fullName as string) || 'New User',
-    date_of_birth: (data.dateOfBirth as string) || '2000-01-01',
+    fullName: (data.fullName as string) || 'New User',
+    dateOfBirth: (data.dateOfBirth as string) || '2000-01-01',
     gender: (data.gender as string) || 'prefer_not_to_say',
     interests: (data.interests as string[]) || [],
     ...updateData,
