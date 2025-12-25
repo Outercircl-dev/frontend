@@ -113,8 +113,8 @@ export async function completeProfileAction(
     }
   }
 
-  revalidatePath('/feed')
-  redirect('/feed')
+  revalidatePath('/profile')
+  redirect('/profile')
 }
 
 // Simplified version for step-by-step saving
