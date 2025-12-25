@@ -154,20 +154,29 @@ export async function POST(request: NextRequest) {
 
       if (backendResponse.status === 401) {
         return NextResponse.json(
-          { error: 'Unauthorized', message: 'Backend authentication failed' },
+          { profile: null, error: 'Unauthorized' },
           { status: 401 }
         );
       }
 
+      if (backendResponse.status === 400) {
+        // Log backend error details server-side but return sanitized message
+        console.error('Backend validation error:', errorText);
+        return NextResponse.json(
+          { profile: null, error: 'Invalid request data' },
+          { status: 400 }
+        );
+      }
+
       return NextResponse.json(
-        { error: 'Internal Server Error', message: 'Failed to save profile' },
+        { profile: null, error: 'Failed to save profile' },
         { status: 500 }
       );
     }
 
     const result = await backendResponse.json();
 
-    return NextResponse.json({ success: true, profile: result }, { status: 200 });
+    return NextResponse.json({ profile: result, error: null }, { status: 200 });
 
   } catch (error) {
     console.error('Error in POST /api/v1/profile:', error);
@@ -233,20 +242,29 @@ export async function PUT(request: NextRequest) {
 
       if (backendResponse.status === 401) {
         return NextResponse.json(
-          { error: 'Unauthorized', message: 'Backend authentication failed' },
+          { profile: null, error: 'Unauthorized' },
           { status: 401 }
         );
       }
 
+      if (backendResponse.status === 400) {
+        // Log backend error details server-side but return sanitized message
+        console.error('Backend validation error:', errorText);
+        return NextResponse.json(
+          { profile: null, error: 'Invalid request data' },
+          { status: 400 }
+        );
+      }
+
       return NextResponse.json(
-        { error: 'Internal Server Error', message: 'Failed to update profile' },
+        { profile: null, error: 'Failed to update profile' },
         { status: 500 }
       );
     }
 
     const result = await backendResponse.json();
 
-    return NextResponse.json({ success: true, profile: result }, { status: 200 });
+    return NextResponse.json({ profile: result, error: null }, { status: 200 });
 
   } catch (error) {
     console.error('Error in PUT /api/v1/profile:', error);
@@ -306,26 +324,29 @@ export async function PATCH(request: NextRequest) {
 
       if (backendResponse.status === 401) {
         return NextResponse.json(
-          { error: 'Unauthorized', message: 'Backend authentication failed' },
+          { profile: null, error: 'Unauthorized' },
           { status: 401 }
         );
       }
 
       if (backendResponse.status === 400) {
+        // Log backend error details server-side but return sanitized message
+        // Avoid exposing internal implementation details to clients
+        console.error('Backend validation error:', errorText);
         return NextResponse.json(
-          { error: 'Bad Request', message: errorText },
+          { profile: null, error: 'Invalid request data' },
           { status: 400 }
         );
       }
 
       return NextResponse.json(
-        { error: 'Internal Server Error', message: 'Failed to update profile' },
+        { profile: null, error: 'Failed to update profile' },
         { status: 500 }
       );
     }
 
     const result = await backendResponse.json();
-    return NextResponse.json({ success: true, profile: result }, { status: 200 });
+    return NextResponse.json({ profile: result, error: null }, { status: 200 });
 
   } catch (error) {
     console.error('Error in PATCH /api/v1/profile:', error);
