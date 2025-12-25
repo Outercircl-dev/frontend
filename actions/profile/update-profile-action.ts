@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import type { ProfileFormState } from '@/lib/types/profile'
 import { buildApiUrl } from '@/lib/utils/api-url'
 
-const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export interface ProfileUpdateInput {
   fullName?: string
@@ -52,57 +52,68 @@ export async function updateProfileAction(
 
     // Call backend API
     if (!API_URL) {
-      console.error('API_URL is not configured')
+      console.error('NEXT_PUBLIC_API_URL is not configured')
       return {
         status: 'error',
         message: 'Backend URL not configured',
       }
     }
 
-    // Transform camelCase to match backend expectations
-    const backendData: Record<string, unknown> = {}
-    if (updates.fullName !== undefined) backendData.fullName = updates.fullName
-    if (updates.gender !== undefined) backendData.gender = updates.gender
-    if (updates.profilePictureUrl !== undefined) backendData.profilePictureUrl = updates.profilePictureUrl
-    if (updates.interests !== undefined) backendData.interests = updates.interests
-    if (updates.bio !== undefined) backendData.bio = updates.bio
-    if (updates.hobbies !== undefined) backendData.hobbies = updates.hobbies
-    if (updates.distanceRadiusKm !== undefined) backendData.distanceRadiusKm = updates.distanceRadiusKm
-    if (updates.availability !== undefined) backendData.availability = updates.availability
+    // Filter out undefined/null values for partial update
+    const backendData = Object.fromEntries(
+      Object.entries(updates).filter(([, value]) => value !== undefined && value !== null)
+    )
 
-    const backendResponse = await fetch(buildApiUrl(API_URL, 'profile'), {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(backendData),
-      cache: 'no-store',
-    })
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
-    if (!backendResponse.ok) {
-      const errorText = await backendResponse.text()
-      console.error('Backend /api/profile PATCH error:', backendResponse.status, errorText)
-      
-      if (backendResponse.status === 400) {
+    try {
+      const backendResponse = await fetch(buildApiUrl(API_URL, 'profile'), {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(backendData),
+        cache: 'no-store',
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!backendResponse.ok) {
+        const errorText = await backendResponse.text()
+        console.error('Backend /api/profile PATCH error:', backendResponse.status, errorText)
+        
+        if (backendResponse.status === 400) {
+          return {
+            status: 'error',
+            message: errorText || 'Invalid data provided. Please check your input.',
+          }
+        }
+        
         return {
           status: 'error',
-          message: errorText || 'Invalid data provided. Please check your input.',
+          message: 'Failed to update profile. Please try again.',
         }
       }
-      
+
+      // Revalidate the profile page cache
+      revalidatePath('/profile')
+
       return {
-        status: 'error',
-        message: 'Failed to update profile. Please try again.',
+        status: 'success',
+        message: 'Profile updated successfully!',
       }
-    }
-
-    // Revalidate the profile page cache
-    revalidatePath('/profile')
-
-    return {
-      status: 'success',
-      message: 'Profile updated successfully!',
+    } catch (fetchError) {
+      clearTimeout(timeoutId)
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        return {
+          status: 'error',
+          message: 'Request timeout. Please try again.',
+        }
+      }
+      throw fetchError
     }
   } catch (error) {
     console.error('Update profile error:', error)

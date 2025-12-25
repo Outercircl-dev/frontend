@@ -1,12 +1,12 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
+import { redirect, isRedirectError } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { ProfileFormState } from '@/lib/types/profile'
 import { buildApiUrl } from '@/lib/utils/api-url'
 
-const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 /**
  * Delete user profile
@@ -28,48 +28,65 @@ export async function deleteProfileAction(): Promise<ProfileFormState> {
 
     // Call backend API
     if (!API_URL) {
-      console.error('API_URL is not configured')
+      console.error('NEXT_PUBLIC_API_URL is not configured')
       return {
         status: 'error',
         message: 'Backend URL not configured',
       }
     }
 
-    const backendResponse = await fetch(buildApiUrl(API_URL, 'profile'), {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    })
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
-    if (!backendResponse.ok) {
-      const errorText = await backendResponse.text()
-      console.error('Backend /api/profile DELETE error:', backendResponse.status, errorText)
-      
-      if (backendResponse.status === 404) {
+    try {
+      const backendResponse = await fetch(buildApiUrl(API_URL, 'profile'), {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!backendResponse.ok) {
+        const errorText = await backendResponse.text()
+        console.error('Backend /api/profile DELETE error:', backendResponse.status, errorText)
+        
+        if (backendResponse.status === 404) {
+          return {
+            status: 'error',
+            message: 'Profile not found',
+          }
+        }
+        
         return {
           status: 'error',
-          message: 'Profile not found',
+          message: 'Failed to delete profile. Please try again.',
         }
       }
-      
-      return {
-        status: 'error',
-        message: 'Failed to delete profile. Please try again.',
+
+      // Revalidate paths
+      revalidatePath('/profile')
+      revalidatePath('/onboarding/profile')
+
+      // Redirect to onboarding after successful deletion
+      redirect('/onboarding/profile')
+    } catch (fetchError) {
+      clearTimeout(timeoutId)
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        return {
+          status: 'error',
+          message: 'Request timeout. Please try again.',
+        }
       }
+      throw fetchError
     }
-
-    // Revalidate paths
-    revalidatePath('/profile')
-    revalidatePath('/onboarding/profile')
-
-    // Redirect to onboarding after successful deletion
-    redirect('/onboarding/profile')
   } catch (error) {
     // If redirect was thrown, re-throw it
-    if (error instanceof Error && error.message.includes('NEXT_REDIRECT')) {
+    if (isRedirectError(error)) {
       throw error
     }
     

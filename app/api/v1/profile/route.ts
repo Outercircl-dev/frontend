@@ -15,7 +15,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
  * 3. Call backend /api/profile with Bearer token
  * 4. Return profile data
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // 1. Get Supabase client (uses request cookies)
     const supabase = await createClient();
@@ -122,7 +122,15 @@ export async function POST(request: NextRequest) {
     const accessToken = session.access_token;
 
     // 3. Get profile data from request body
-    const profileData = await request.json();
+    let profileData;
+    try {
+      profileData = await request.json();
+    } catch (_jsonError) {
+      return NextResponse.json(
+        { error: 'Bad Request', message: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
 
     // 4. Call backend /api/profile endpoint with Bearer token
     if (!API_URL) {
@@ -201,7 +209,15 @@ export async function PUT(request: NextRequest) {
     const accessToken = session.access_token;
 
     // 3. Get profile data from request body
-    const profileData = await request.json();
+    let profileData;
+    try {
+      profileData = await request.json();
+    } catch (_jsonError) {
+      return NextResponse.json(
+        { error: 'Bad Request', message: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
 
     // 4. Call backend /api/profile endpoint with Bearer token
     if (!API_URL) {
@@ -275,7 +291,15 @@ export async function PATCH(request: NextRequest) {
     }
 
     const accessToken = session.access_token;
-    const profileData = await request.json();
+    let profileData;
+    try {
+      profileData = await request.json();
+    } catch (_jsonError) {
+      return NextResponse.json(
+        { error: 'Bad Request', message: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
 
     if (!API_URL) {
       console.error('NEXT_PUBLIC_API_URL is not configured');
@@ -341,7 +365,7 @@ export async function PATCH(request: NextRequest) {
  * 
  * OD-190: Delete profile - Proxies to NestJS backend profile endpoint to delete profile.
  */
-export async function DELETE(request: NextRequest) {
+export async function DELETE(_request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
