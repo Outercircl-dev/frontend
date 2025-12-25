@@ -42,7 +42,9 @@ export async function getProfileAction(): Promise<GetProfileResult> {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      cache: 'no-store',
+      // Use short-lived cache with revalidation for better performance
+      // Profile data doesn't change frequently, so 60s cache is reasonable
+      next: { revalidate: 60 },
     })
 
     if (!backendResponse.ok) {
@@ -67,7 +69,8 @@ export async function getProfileAction(): Promise<GetProfileResult> {
       return { profile: null, error: 'Invalid profile data received from backend' }
     }
     
-    return { profile: validationResult.data as UserProfile, error: null }
+    // Schema validation ensures type safety, no need for type assertion
+    return { profile: validationResult.data, error: null }
   } catch (error) {
     console.error('Get profile error:', error)
     return { profile: null, error: error instanceof Error ? error.message : 'Unknown error' }
