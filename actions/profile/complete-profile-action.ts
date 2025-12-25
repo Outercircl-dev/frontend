@@ -59,22 +59,21 @@ export async function completeProfileAction(
     return { status: 'error', message: 'You must be logged in to complete your profile' }
   }
 
-  // Prepare profile data for backend
+  // Prepare profile data for backend (backend expects camelCase per ProfileInput interface)
   const profileData = {
-    full_name: parsed.data.fullName,
-    date_of_birth: parsed.data.dateOfBirth,
+    fullName: parsed.data.fullName,
+    dateOfBirth: parsed.data.dateOfBirth,
     gender: parsed.data.gender,
-    profile_picture_url: profilePictureUrl || null,
+    profilePictureUrl: profilePictureUrl || null,
     bio: parsed.data.bio || null,
     interests: parsed.data.interests,
     hobbies: parsed.data.hobbies || [],
     availability: parsed.data.availability || {},
-    distance_radius_km: parsed.data.distanceRadiusKm,
-    accepted_tos: true,
-    accepted_guidelines: true,
-    accepted_tos_at: new Date().toISOString(),
-    accepted_guidelines_at: new Date().toISOString(),
-    profile_completed: true,
+    distanceRadiusKm: parsed.data.distanceRadiusKm,
+    acceptedTos: true,
+    acceptedGuidelines: true,
+    confirmedAge: parsed.data.confirmedAge,
+    confirmedPlatonic: parsed.data.confirmedPlatonic,
   }
 
   // Call backend API directly (following architecture pattern)
