@@ -2,7 +2,7 @@
 const config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/src', '<rootDir>/lib', '<rootDir>/hooks'],
+  roots: ['<rootDir>/src', '<rootDir>/lib', '<rootDir>/hooks', '<rootDir>/actions', '<rootDir>/app'],
   testMatch: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   moduleNameMapper: {
@@ -12,6 +12,8 @@ const config = {
     'src/**/*.{ts,tsx}',
     'lib/**/*.{ts,tsx}',
     'hooks/**/*.{ts,tsx}',
+    'actions/**/*.{ts,tsx}',
+    'app/**/*.{ts,tsx}',
     '!**/*.d.ts',
     '!**/__tests__/**',
   ],
