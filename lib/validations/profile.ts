@@ -103,6 +103,38 @@ export type GuidelinesData = z.infer<typeof guidelinesSchema>
 export type CompleteProfileData = z.infer<typeof completeProfileSchema>
 
 // Default values for form initialization (matches OnboardingFormData)
+// Schema for validating backend API responses (snake_case fields)
+// This is separate from completeProfileSchema which validates form input (camelCase)
+export const userProfileSchema = z.object({
+  id: z.string().uuid(),
+  user_id: z.string().uuid(),
+  full_name: z.string().min(1),
+  date_of_birth: z.string(), // ISO date string from backend
+  gender: z.enum(genderOptions),
+  profile_picture_url: z.string().nullable(),
+  bio: z.string().nullable(),
+  interests: z.array(z.string()),
+  hobbies: z.array(z.string()),
+  availability: z
+    .object({
+      weekday_morning: z.boolean().optional(),
+      weekday_afternoon: z.boolean().optional(),
+      weekday_evening: z.boolean().optional(),
+      weekend_anytime: z.boolean().optional(),
+    })
+    .nullable()
+    .optional(),
+  distance_radius_km: z.number().int().positive().default(25),
+  accepted_tos: z.boolean(),
+  accepted_guidelines: z.boolean(),
+  accepted_tos_at: z.string().nullable(),
+  accepted_guidelines_at: z.string().nullable(),
+  profile_completed: z.boolean(),
+  is_verified: z.boolean(),
+  created_at: z.string(), // ISO timestamp
+  updated_at: z.string(), // ISO timestamp
+})
+
 export const defaultProfileValues = {
   fullName: '',
   dateOfBirth: '',
