@@ -59,9 +59,9 @@ describe('auth-state-machine', () => {
       expect(url).toBe('/auth/verify-email');
     });
 
-    it('should return /auth/complete-profile for NEEDS_PROFILE_COMPLETION', () => {
+    it('should return /onboarding/profile for NEEDS_PROFILE_COMPLETION', () => {
       const url = getRedirectUrlForState(UserAuthState.NEEDS_PROFILE_COMPLETION);
-      expect(url).toBe('/auth/complete-profile');
+      expect(url).toBe('/onboarding/profile');
     });
 
     it('should return /feed for ACTIVE state', () => {
@@ -69,14 +69,14 @@ describe('auth-state-machine', () => {
       expect(url).toBe('/feed');
     });
 
-    it('should return /auth/login for null state (unauthenticated)', () => {
+    it('should return /login for null state (unauthenticated)', () => {
       const url = getRedirectUrlForState(null);
-      expect(url).toBe('/auth/login');
+      expect(url).toBe('/login');
     });
 
-    it('should return /auth/login for undefined state', () => {
+    it('should return /login for undefined state', () => {
       const url = getRedirectUrlForState(undefined as unknown as UserAuthStateType);
-      expect(url).toBe('/auth/login');
+      expect(url).toBe('/login');
     });
   });
 
@@ -92,7 +92,7 @@ describe('auth-state-machine', () => {
       state = getUserAuthState(true, false);
       url = getRedirectUrlForState(state);
       expect(state).toBe(UserAuthState.NEEDS_PROFILE_COMPLETION);
-      expect(url).toBe('/auth/complete-profile');
+      expect(url).toBe('/onboarding/profile');
 
       // Step 3: User completes profile
       state = getUserAuthState(true, true);

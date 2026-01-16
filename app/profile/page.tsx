@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import type { Availability } from '@/lib/types/profile'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,18 +27,17 @@ function formatDate(dateString: string) {
     return d.toLocaleDateString('en-IE', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-function formatAvailability(availability: Record<string, boolean> | null | undefined) {
+function formatAvailability(availability: Availability | null | undefined) {
     if (!availability) return []
-    const labels: Record<string, string> = {
+    const labels: Record<keyof Availability, string> = {
         weekday_morning: 'Weekday mornings',
         weekday_afternoon: 'Weekday afternoons',
         weekday_evening: 'Weekday evenings',
         weekend_anytime: 'Weekend anytime',
     }
 
-    return Object.entries(availability)
-        .filter(([, value]) => Boolean(value))
-        .map(([key]) => labels[key] ?? key)
+    const keys = Object.keys(labels) as Array<keyof Availability>
+    return keys.filter((key) => Boolean(availability[key])).map((key) => labels[key])
 }
 
 export default async function ProfilePage() {

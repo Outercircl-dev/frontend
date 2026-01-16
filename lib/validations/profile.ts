@@ -115,15 +115,17 @@ export const userProfileSchema = z.object({
   bio: z.string().nullable(),
   interests: z.array(z.string()),
   hobbies: z.array(z.string()),
-  availability: z
-    .object({
-      weekday_morning: z.boolean().optional(),
-      weekday_afternoon: z.boolean().optional(),
-      weekday_evening: z.boolean().optional(),
-      weekend_anytime: z.boolean().optional(),
-    })
-    .nullable()
-    .optional(),
+  // Backend may return null/undefined; normalize to a fully-populated object
+  // so the result matches `UserProfile.availability` (required) type.
+  availability: z.preprocess(
+    (val) => (val == null ? {} : val),
+    z.object({
+      weekday_morning: z.boolean().default(false),
+      weekday_afternoon: z.boolean().default(false),
+      weekday_evening: z.boolean().default(false),
+      weekend_anytime: z.boolean().default(false),
+    }),
+  ),
   distance_radius_km: z.number().int().positive().default(25),
   accepted_tos: z.boolean(),
   accepted_guidelines: z.boolean(),
