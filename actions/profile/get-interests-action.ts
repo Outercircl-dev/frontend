@@ -2,6 +2,7 @@
 
 import type { Interest, InterestCategory } from '@/lib/types/profile'
 import { createClient } from '@/lib/supabase/server'
+import { buildApiUrl } from '@/lib/utils/api-url'
 
 const API_URL = process.env.API_URL
 
@@ -81,7 +82,7 @@ export async function getInterestsAction(): Promise<GetInterestsResult> {
     const { data: sessionData } = await supabase.auth.getSession()
     const accessToken = sessionData.session?.access_token
 
-    const backendResponse = await fetch(`${API_URL}/interests`, {
+    const backendResponse = await fetch(buildApiUrl(API_URL, 'interests'), {
       method: 'GET',
       headers: {
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
