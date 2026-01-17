@@ -1,8 +1,11 @@
+import Link from 'next/link'
+
 import { CalendarDays, Clock, Globe, Lock, MapPin, Users } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
+import { Button } from '@/components/ui/button'
 import type { Activity } from '@/lib/types/activity'
 
 function formatDate(dateString: string) {
@@ -32,6 +35,10 @@ export function ActivityCard({ activity }: { activity: Activity }) {
   const current = Math.max(0, activity.currentParticipants ?? 0)
   const ratio = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0
   const spotsLeft = total > 0 ? Math.max(0, total - current) : null
+  const locationLabel =
+    activity.meetingPointHidden && activity.location?.address
+      ? 'Join to reveal exact meeting point'
+      : activity.location?.address ?? 'Unknown location'
 
   return (
     <Card className="group overflow-hidden border-muted/70 bg-background transition hover:-translate-y-0.5 hover:shadow-md">
@@ -76,7 +83,7 @@ export function ActivityCard({ activity }: { activity: Activity }) {
           </div>
           <div className="flex items-center gap-2 sm:col-span-2">
             <MapPin className="h-4 w-4" />
-            <span className="line-clamp-1 text-foreground">{activity.location?.address ?? 'Unknown location'}</span>
+            <span className="line-clamp-1 text-foreground">{locationLabel}</span>
           </div>
         </div>
 
@@ -111,6 +118,16 @@ export function ActivityCard({ activity }: { activity: Activity }) {
         ) : (
           <p className="text-sm text-muted-foreground">No interests tagged.</p>
         )}
+
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            Waitlist:{' '}
+            <span className="font-medium text-foreground">{activity.waitlistCount ?? 0}</span>
+          </span>
+          <Button asChild variant="link" className="h-auto px-0 text-primary">
+            <Link href={`/activities/${activity.id}`}>View details</Link>
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )

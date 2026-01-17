@@ -4,6 +4,16 @@ export interface ActivityLocation {
   longitude: number
 }
 
+export type ParticipationState = 'not_joined' | 'pending' | 'confirmed' | 'waitlisted'
+
+export interface ViewerParticipationMeta {
+  participantId: string
+  status: ParticipationState
+  waitlistPosition: number | null
+  joinedAt: string | null
+  approvedAt: string | null
+}
+
 export interface Activity {
   id: string
   hostId: string
@@ -17,10 +27,13 @@ export interface Activity {
   endTime: string // HH:mm:ss
   maxParticipants: number
   currentParticipants: number
+  waitlistCount: number
   status: string
   isPublic: boolean
   createdAt: string
   updatedAt: string
+  meetingPointHidden: boolean
+  viewerParticipation?: ViewerParticipationMeta
 }
 
 export interface ActivitiesResponse {
