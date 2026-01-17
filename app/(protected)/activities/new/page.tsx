@@ -46,6 +46,10 @@ export default function CreateActivityPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
+    setMaxParticipants(isPremium ? '6' : '4')
+  }, [isPremium])
+
+  useEffect(() => {
     if (!isPremium) return
     let cancelled = false
     async function loadGroups() {
@@ -93,8 +97,8 @@ export default function CreateActivityPage() {
         interests: parsedInterests,
         location: {
           address,
-          latitude: latitude ? Number(latitude) : 0,
-          longitude: longitude ? Number(longitude) : 0,
+          latitude: latitude ? Number(latitude) : null,
+          longitude: longitude ? Number(longitude) : null,
         },
         activityDate,
         startTime,

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { use, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, CalendarDays, Save } from 'lucide-react'
 
@@ -21,6 +22,7 @@ type Group = {
 export default function EditActivityPage({ params }: { params: Promise<{ activityId: string }> }) {
   const { activityId } = use(params)
   const { user } = useAuthState()
+  const router = useRouter()
   const isPremium = user?.type === 'PREMIUM'
 
   const [activity, setActivity] = useState<Activity | null>(null)
@@ -52,12 +54,18 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
     let cancelled = false
     async function loadActivity() {
       try {
+        if (!user?.id) return
         const res = await fetch(`/rpc/v1/activities/${activityId}`)
         if (!res.ok) {
           throw new Error('Failed to load activity')
         }
         const data = (await res.json()) as Activity
         if (cancelled) return
+        if (user.id !== data.hostId) {
+          setError('You are not authorized to edit this activity')
+          router.replace(`/activities/${data.id}`)
+          return
+        }
         setActivity(data)
         setTitle(data.title)
         setDescription(data.description ?? '')
@@ -87,7 +95,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
     return () => {
       cancelled = true
     }
-  }, [activityId])
+  }, [activityId, router, user?.id])
 
   useEffect(() => {
     if (!isPremium) return
@@ -163,7 +171,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
         throw new Error(text || 'Failed to update activity')
       }
       const updated = (await res.json()) as Activity
-      window.location.href = `/activities/${updated.id}`
+      router.push(`/activities/${updated.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update activity')
     } finally {
@@ -207,8 +215,20 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
 
           <div className="grid gap-3 md:grid-cols-3">
             <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" />
-            <Input value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="Latitude" />
-            <Input value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="Longitude" />
+            <Input
+              type="number"
+              step="any"
+              value={latitude}
+              onChange={(e) => setLatitude(e.target.value)}
+              placeholder="Latitude"
+            />
+            <Input
+              type="number"
+              step="any"
+              value={longitude}
+              onChange={(e) => setLongitude(e.target.value)}
+              placeholder="Longitude"
+            />
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">
@@ -279,9 +299,10 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
                     <SelectItem value="monthly">Monthly</SelectItem>
                   </SelectContent>
                 </Select>
-                <Input value={interval} onChange={(e) => setInterval(e.target.value)} placeholder="Interval" />
+                <Input type="number" value={interval} onChange={(e) => setInterval(e.target.value)} placeholder="Interval" />
                 <Input type="date" value={endsOn} onChange={(e) => setEndsOn(e.target.value)} />
                 <Input
+                  type="number"
                   value={occurrences}
                   onChange={(e) => setOccurrences(e.target.value)}
                   placeholder="Occurrences"
