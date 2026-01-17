@@ -20,6 +20,12 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Activity Participation UI
+
+- The feed and detail views proxy the backend via `/rpc/v1/activities` (list) and `/rpc/v1/activities/[activityId]` (detail). These routes forward the Supabase session token so viewers see their participation state and hidden meeting points.
+- Joining/cancelling happens through `/rpc/v1/activities/[activityId]/participants` (POST/DELETE). Host approvals live under `/rpc/v1/activities/[activityId]/participants/[participantId]`.
+- Hosts can review and moderate their roster at `/host/activities/[activityId]/participants`, while members can manage their own RSVP on `/activities/[activityId]`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

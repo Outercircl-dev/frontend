@@ -42,7 +42,7 @@ export default function FeedPage() {
         params.set('page', String(page))
         params.set('limit', String(limit))
 
-        const res = await fetch(`/api/activities?${params.toString()}`, {
+        const res = await fetch(`/rpc/v1/activities?${params.toString()}`, {
           headers: { 'Content-Type': 'application/json' },
         })
 
@@ -124,6 +124,9 @@ export default function FeedPage() {
           </Link>
 
           <div className="flex items-center gap-2">
+            <Button asChild variant="outline" className="hidden sm:inline-flex">
+              <Link href="/activities">My activities</Link>
+            </Button>
             <Button asChild variant="outline" className="hidden sm:inline-flex">
               <Link href="/profile">Profile</Link>
             </Button>

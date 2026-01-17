@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
 import { useAuthState } from '@/hooks/useAuthState';
+import { UserAuthState } from '@/lib/auth-state-machine';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface ProtectedLayoutProps {
@@ -33,6 +34,10 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
 
     if (error || !state) {
       router.push('/login');
+      return;
+    }
+
+    if (state === UserAuthState.ACTIVE) {
       return;
     }
 

@@ -10,7 +10,7 @@ const API_URL = process.env.API_URL;
  */
 interface AuthMeResponse {
   state: string;
-  redirectUrl: string;
+  redirectUrl: string | null;
   user: {
     id: string;
     email: string;

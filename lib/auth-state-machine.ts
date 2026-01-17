@@ -66,14 +66,14 @@ export function getUserAuthState(
  * @param state - Current authentication state
  * @returns URL to redirect user to
  */
-export function getRedirectUrlForState(state: UserAuthStateType): string {
+export function getRedirectUrlForState(state: UserAuthStateType): string | null {
   switch (state) {
     case UserAuthState.NEEDS_EMAIL_VERIFICATION:
       return '/auth/verify-email';
     case UserAuthState.NEEDS_PROFILE_COMPLETION:
       return '/onboarding/profile';
     case UserAuthState.ACTIVE:
-      return '/feed';
+      return null;
     default:
       return '/login';
   }

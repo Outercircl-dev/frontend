@@ -4,21 +4,17 @@ import { createClient } from '@/lib/supabase/server'
 
 const API_URL = process.env.API_URL
 
-export async function GET(request: NextRequest) {
+export async function GET(_: NextRequest, { params }: { params: Promise<{ activityId: string }> }) {
+  const { activityId } = await params
   try {
     if (!API_URL) {
-      console.error('API_URL is not configured for activities fetch')
+      console.error('API_URL is not configured for activity detail fetch')
       return NextResponse.json(
         { error: 'Internal Server Error', message: 'Backend URL not configured' },
         { status: 500 },
       )
     }
 
-    const url = new URL(request.url)
-    const backendUrl = new URL(`${API_URL.replace(/\/+$/, '')}/api/activities`)
-    backendUrl.search = url.search // forward all query params (page, limit, filters, etc.)
-
-    // Forward auth token if present (activities may be public, but this keeps it flexible)
     const supabase = await createClient()
     const {
       data: { session },
@@ -27,7 +23,7 @@ export async function GET(request: NextRequest) {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 10_000)
 
-    const backendResponse = await fetch(backendUrl.toString(), {
+    const backendResponse = await fetch(`${API_URL.replace(/\/+$/, '')}/api/activities/${activityId}`, {
       method: 'GET',
       headers: {
         ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
@@ -39,26 +35,25 @@ export async function GET(request: NextRequest) {
     clearTimeout(timeoutId)
 
     const isJson = backendResponse.headers.get('content-type')?.includes('application/json')
-    const responsePayload = isJson ? await backendResponse.json() : await backendResponse.text()
+    const payload = isJson ? await backendResponse.json() : await backendResponse.text()
 
     if (!backendResponse.ok) {
-      const status = backendResponse.status || 500
-      const normalizedError = isJson ? responsePayload : { error: responsePayload || 'Activities fetch failed' }
-      return NextResponse.json(normalizedError, { status })
-    }
-
-    return NextResponse.json(responsePayload, { status: backendResponse.status })
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
       return NextResponse.json(
-        { error: 'Gateway Timeout', message: 'Activities request timed out' },
-        { status: 504 },
+        isJson ? payload : { error: payload || 'Activity fetch failed' },
+        { status: backendResponse.status || 500 },
       )
     }
 
-    console.error('Error in GET /api/activities:', error)
+    return NextResponse.json(payload, { status: backendResponse.status })
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return NextResponse.json(
+        { error: 'Gateway Timeout', message: 'Activity request timed out' },
+        { status: 504 },
+      )
+    }
+    console.error('Error in GET /rpc/v1/activities/[activityId]:', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
-
 
