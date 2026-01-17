@@ -64,9 +64,9 @@ describe('auth-state-machine', () => {
       expect(url).toBe('/onboarding/profile');
     });
 
-    it('should return /feed for ACTIVE state', () => {
+    it('should return null for ACTIVE state', () => {
       const url = getRedirectUrlForState(UserAuthState.ACTIVE);
-      expect(url).toBe('/feed');
+      expect(url).toBeNull();
     });
 
     it('should return /login for null state (unauthenticated)', () => {
@@ -98,14 +98,14 @@ describe('auth-state-machine', () => {
       state = getUserAuthState(true, true);
       url = getRedirectUrlForState(state);
       expect(state).toBe(UserAuthState.ACTIVE);
-      expect(url).toBe('/feed');
+      expect(url).toBeNull();
     });
 
     it('should handle returning user (already onboarded)', () => {
       const state = getUserAuthState(true, true);
       const url = getRedirectUrlForState(state);
       expect(state).toBe(UserAuthState.ACTIVE);
-      expect(url).toBe('/feed');
+      expect(url).toBeNull();
     });
   });
 });

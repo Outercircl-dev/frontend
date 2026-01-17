@@ -26,6 +26,12 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 - Joining/cancelling happens through `/rpc/v1/activities/[activityId]/participants` (POST/DELETE). Host approvals live under `/rpc/v1/activities/[activityId]/participants/[participantId]`.
 - Hosts can review and moderate their roster at `/host/activities/[activityId]/participants`, while members can manage their own RSVP on `/activities/[activityId]`.
 
+## Activity Hosting (FR4)
+
+- Host tools live under `/activities` (my activities overview), `/activities/new` (create), and `/activities/[activityId]/edit` (edit).
+- Premium group management is under `/activities/groups` and proxies to `/rpc/v1/activities/groups`.
+- Recurring schedules are captured via the activity form and sent to `/rpc/v1/activities` as `recurrence`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

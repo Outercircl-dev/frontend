@@ -30,6 +30,18 @@ export interface Activity {
   waitlistCount: number
   status: string
   isPublic: boolean
+  group?: {
+    id: string
+    name: string
+    isPublic: boolean
+  } | null
+  recurrence?: {
+    id: string
+    frequency: 'daily' | 'weekly' | 'monthly'
+    interval: number
+    endsOn: string | null
+    occurrences: number | null
+  } | null
   createdAt: string
   updatedAt: string
   meetingPointHidden: boolean

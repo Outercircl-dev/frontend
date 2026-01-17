@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useAuthState } from '@/hooks/useAuthState'
 import type { ActivitiesResponse, Activity } from '@/lib/types/activity'
 
 const DEFAULT_LIMIT = 20
@@ -29,6 +30,7 @@ export default function FeedPage() {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<string>('all')
   const [sort, setSort] = useState<'soonest' | 'newest'>('soonest')
+  const { user } = useAuthState()
 
   useEffect(() => {
     let cancelled = false
@@ -296,7 +298,7 @@ export default function FeedPage() {
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {filteredItems.map((activity) => (
-                <ActivityCard key={activity.id} activity={activity} />
+                <ActivityCard key={activity.id} activity={activity} viewerId={user?.supabaseUserId} />
               ))}
             </div>
           </div>

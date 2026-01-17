@@ -131,6 +131,14 @@ export default function ActivitiesPage() {
             <h1 className="text-3xl font-semibold tracking-tight">My Activities</h1>
             <p className="text-sm text-muted-foreground">Everything you host or are attending, plus what’s trending.</p>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="outline">
+              <Link href="/activities/new">Create activity</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/activities/groups">Groups</Link>
+            </Button>
+          </div>
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -200,7 +208,11 @@ export default function ActivitiesPage() {
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {myActivities.map((activity) => (
-                    <ActivityCard key={`mine-${activity.id}`} activity={activity} />
+                    <ActivityCard
+                      key={`mine-${activity.id}`}
+                      activity={activity}
+                      viewerId={user?.supabaseUserId}
+                    />
                   ))}
                 </div>
               )}
@@ -221,7 +233,11 @@ export default function ActivitiesPage() {
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {upcomingActivities.map((activity) => (
-                    <ActivityCard key={`discover-${activity.id}`} activity={activity} />
+                    <ActivityCard
+                      key={`discover-${activity.id}`}
+                      activity={activity}
+                      viewerId={user?.supabaseUserId}
+                    />
                   ))}
                 </div>
               )}
