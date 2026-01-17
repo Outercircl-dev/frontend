@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, LogOut, MapPin, Search } from 'lucide-react'
 
 import { ActivityCard } from '@/components/activities/activity-card'
@@ -25,7 +25,7 @@ export default function ActivitiesPage() {
   const [query, setQuery] = useState('')
   const { user } = useAuthState()
 
-  useEffect(() => {
+  const fetchActivities = useCallback(() => {
     let cancelled = false
 
     async function load() {
@@ -62,6 +62,10 @@ export default function ActivitiesPage() {
       cancelled = true
     }
   }, [page, limit])
+
+  useEffect(() => {
+    return fetchActivities()
+  }, [fetchActivities])
 
   const normalizedQuery = query.trim().toLowerCase()
   const allItems = useMemo(() => {
@@ -161,7 +165,13 @@ export default function ActivitiesPage() {
               <pre className="whitespace-pre-wrap break-words rounded-lg bg-white/70 p-3 text-xs text-red-700">
                 {error}
               </pre>
-              <Button onClick={() => setPage(1)} variant="outline">
+              <Button
+                onClick={() => {
+                  if (page !== 1) setPage(1)
+                  else fetchActivities()
+                }}
+                variant="outline"
+              >
                 Try again
               </Button>
             </CardContent>
