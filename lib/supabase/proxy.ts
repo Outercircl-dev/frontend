@@ -151,7 +151,7 @@ export async function updateSession(request: NextRequest) {
                     const emailVerified = Boolean(user && user.email_confirmed_at !== null)
                     const profileCompleted = userData.hasOnboarded
                     const authState = getUserAuthState(emailVerified, profileCompleted)
-                    const redirectPath = getRedirectUrlForState(authState)
+                    const redirectPath = getRedirectUrlForState(authState) ?? '/feed'
                     const url = new URL(redirectPath, origin)
                     return redirectWithCookies(url, supabaseResponse, pendingCookies)
                 } else {

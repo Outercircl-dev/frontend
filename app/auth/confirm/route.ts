@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
                 const emailVerified = session?.user?.email_confirmed_at !== null;
                 const profileCompleted = userData.hasOnboarded; // Use hasOnboarded from backend
                 const authState = getUserAuthState(emailVerified, profileCompleted);
-                redirectPath = getRedirectUrlForState(authState);
+                redirectPath = getRedirectUrlForState(authState) ?? '/feed';
             } else {
                 // Backend /me failed
                 if (backendResponse.status === 401) {

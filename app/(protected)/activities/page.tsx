@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, ChevronLeft, ChevronRight, LogOut, MapPin, Search } from 'lucide-react'
+import { ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, LogOut, MapPin, Search } from 'lucide-react'
 
 import { ActivityCard } from '@/components/activities/activity-card'
 import { Badge } from '@/components/ui/badge'
