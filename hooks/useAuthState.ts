@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { UserAuthState, UserAuthStateType } from '@/lib/auth-state-machine';
+import { SubscriptionTier } from '@/lib/types/auth';
 
 interface AuthUser {
   id: string;
   email: string;
   supabaseUserId: string;
+  type: SubscriptionTier;
 }
 
 interface AuthProfile {

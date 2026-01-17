@@ -73,7 +73,7 @@ export function getRedirectUrlForState(state: UserAuthStateType): string | null 
     case UserAuthState.NEEDS_PROFILE_COMPLETION:
       return '/onboarding/profile';
     case UserAuthState.ACTIVE:
-      return '/feed';
+      return null;
     default:
       return '/login';
   }

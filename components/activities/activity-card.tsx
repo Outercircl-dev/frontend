@@ -30,7 +30,7 @@ function titleCase(value: string) {
     .join(' ')
 }
 
-export function ActivityCard({ activity }: { activity: Activity }) {
+export function ActivityCard({ activity, viewerId }: { activity: Activity; viewerId?: string | null }) {
   const total = Math.max(0, activity.maxParticipants ?? 0)
   const current = Math.max(0, activity.currentParticipants ?? 0)
   const ratio = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0
@@ -39,6 +39,7 @@ export function ActivityCard({ activity }: { activity: Activity }) {
     activity.meetingPointHidden && activity.location?.address
       ? 'Join to reveal exact meeting point'
       : activity.location?.address ?? 'Unknown location'
+  const isHost = Boolean(viewerId && activity.hostId === viewerId)
 
   return (
     <Card className="group overflow-hidden border-muted/70 bg-background transition hover:-translate-y-0.5 hover:shadow-md">
@@ -57,6 +58,11 @@ export function ActivityCard({ activity }: { activity: Activity }) {
           {activity.status !== 'published' ? (
             <Badge variant="outline" className="capitalize">
               {activity.status}
+            </Badge>
+          ) : null}
+          {isHost ? (
+            <Badge variant="secondary" className="gap-1">
+              Host tools
             </Badge>
           ) : null}
           <Badge variant="outline" className="gap-1">
