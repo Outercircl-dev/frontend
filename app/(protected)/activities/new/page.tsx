@@ -1,15 +1,20 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CalendarDays, Save } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ArrowLeft, CalendarDays, Check, Save } from 'lucide-react'
 
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { getInterestsAction } from '@/actions/profile'
 import { useAuthState } from '@/hooks/useAuthState'
+import { cn } from '@/lib/utils'
+import type { InterestCategory } from '@/lib/types/profile'
 
 type Group = {
   id: string
@@ -24,7 +29,7 @@ export default function CreateActivityPage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('')
-  const [interests, setInterests] = useState('')
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([])
   const [address, setAddress] = useState('')
   const [latitude, setLatitude] = useState('')
   const [longitude, setLongitude] = useState('')
@@ -42,6 +47,9 @@ export default function CreateActivityPage() {
   const [occurrences, setOccurrences] = useState('')
 
   const [groups, setGroups] = useState<Group[]>([])
+  const [interestCategories, setInterestCategories] = useState<InterestCategory[]>([])
+  const [interestsLoading, setInterestsLoading] = useState(true)
+  const [interestsError, setInterestsError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -68,22 +76,35 @@ export default function CreateActivityPage() {
     }
   }, [isPremium])
 
-  const parsedInterests = useMemo(
-    () =>
-      interests
-        .split(',')
-        .map((value) => value.trim())
-        .filter(Boolean)
-        .map((value) =>
-          value
-            .toLowerCase()
-            .replace(/\s+/g, '_')
-            .replace(/[^a-z0-9_]/g, ''),
-        ),
-    [interests],
-  )
+  useEffect(() => {
+    let cancelled = false
+    async function loadInterests() {
+      const result = await getInterestsAction()
+      if (cancelled) return
+      if (result.categories?.length) {
+        setInterestCategories(result.categories)
+      }
+      setInterestsError(result.error)
+      setInterestsLoading(false)
+    }
+    loadInterests()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
-  const canSubmit = Boolean(title && activityDate && startTime && maxParticipants)
+  const hasRequiredLocation = Boolean(address.trim() && latitude.trim() && longitude.trim())
+  const hasRequiredTags = selectedInterests.length > 0
+  const canSubmit = Boolean(
+    title.trim() &&
+      category.trim() &&
+      hasRequiredTags &&
+      hasRequiredLocation &&
+      activityDate &&
+      startTime &&
+      endTime &&
+      maxParticipants,
+  )
 
   const handleSubmit = async () => {
     try {
@@ -94,7 +115,7 @@ export default function CreateActivityPage() {
         title,
         description,
         category,
-        interests: parsedInterests,
+        interests: selectedInterests,
         location: {
           address,
           latitude: latitude ? Number(latitude) : null,
@@ -102,7 +123,7 @@ export default function CreateActivityPage() {
         },
         activityDate,
         startTime,
-        endTime: endTime || undefined,
+        endTime,
         maxParticipants: isPremium ? Number(maxParticipants) : 4,
         isPublic,
         groupId: isPremium ? groupId : undefined,
@@ -158,28 +179,121 @@ export default function CreateActivityPage() {
         <CardContent className="space-y-4">
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
-          <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Category" />
-          <Input
-            value={interests}
-            onChange={(e) => setInterests(e.target.value)}
-            placeholder="Interests (comma separated, e.g. sports, football)"
-          />
-          <p className="text-xs text-muted-foreground">
-            Interests are stored as slugs (lowercase with underscores). We convert your input automatically.
-          </p>
-
-          <div className="grid gap-3 md:grid-cols-3">
-            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" />
-            <Input value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="Latitude" />
-            <Input value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="Longitude" />
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1">
+              Title <span className="text-red-500">*</span>
+            </Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" required />
+          </div>
+          <div className="space-y-2">
+            <Label>Description</Label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
+          </div>
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1">
+              Category <span className="text-red-500">*</span>
+            </Label>
+            <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Category" required />
+          </div>
+          <div className="space-y-3">
+            <Label className="flex items-center gap-1">
+              Interests <span className="text-red-500">*</span>
+            </Label>
+            <div className="flex items-center gap-2">
+              <Badge variant={selectedInterests.length > 0 ? 'default' : 'secondary'}>
+                {selectedInterests.length} selected
+              </Badge>
+              <span className="text-xs text-muted-foreground">Choose at least 1 (up to 10).</span>
+            </div>
+            {interestsError ? <p className="text-xs text-destructive">{interestsError}</p> : null}
+            {interestsLoading ? (
+              <p className="text-sm text-muted-foreground">Loading interests...</p>
+            ) : (
+              <div className="max-h-[320px] space-y-4 overflow-y-auto pr-2">
+                {interestCategories.map((interestCategory) => (
+                  <div key={interestCategory.name} className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {interestCategory.name}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {interestCategory.interests.map((interest) => {
+                        const isSelected = selectedInterests.includes(interest.slug)
+                        const isDisabled = !isSelected && selectedInterests.length >= 10
+                        return (
+                          <button
+                            key={interest.slug}
+                            type="button"
+                            onClick={() => {
+                              setSelectedInterests((prev) =>
+                                prev.includes(interest.slug)
+                                  ? prev.filter((slug) => slug !== interest.slug)
+                                  : prev.length < 10
+                                    ? [...prev, interest.slug]
+                                    : prev,
+                              )
+                            }}
+                            disabled={isDisabled}
+                            className={cn(
+                              'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-medium transition-all',
+                              isSelected
+                                ? 'border-primary bg-primary/10 text-primary'
+                                : 'border-border bg-background text-foreground hover:border-primary/50 hover:bg-primary/5',
+                              isDisabled && 'cursor-not-allowed opacity-50',
+                            )}
+                          >
+                            <span>{interest.icon}</span>
+                            <span>{interest.name}</span>
+                            {isSelected ? <Check className="h-3.5 w-3.5" /> : null}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">
-            <Input type="date" value={activityDate} onChange={(e) => setActivityDate(e.target.value)} />
-            <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-            <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                Address <span className="text-red-500">*</span>
+              </Label>
+              <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" required />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                Latitude <span className="text-red-500">*</span>
+              </Label>
+              <Input value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="Latitude" required />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                Longitude <span className="text-red-500">*</span>
+              </Label>
+              <Input value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="Longitude" required />
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                Date <span className="text-red-500">*</span>
+              </Label>
+              <Input type="date" value={activityDate} onChange={(e) => setActivityDate(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                Start time <span className="text-red-500">*</span>
+              </Label>
+              <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                End time <span className="text-red-500">*</span>
+              </Label>
+              <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
+            </div>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">

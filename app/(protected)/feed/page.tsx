@@ -73,7 +73,9 @@ export default function FeedPage() {
   const categories = useMemo(() => {
     const items = raw?.items ?? []
     const set = new Set<string>()
-    items.forEach((item) => set.add(item.category))
+    items.forEach((item) => {
+      if (item.category) set.add(item.category)
+    })
     return Array.from(set).sort((a, b) => a.localeCompare(b))
   }, [raw])
 

@@ -131,6 +131,19 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
     [interests],
   )
 
+  const hasRequiredLocation = Boolean(address.trim() && latitude.trim() && longitude.trim())
+  const hasRequiredTags = parsedInterests.length > 0
+  const canSubmit = Boolean(
+    title.trim() &&
+      category.trim() &&
+      hasRequiredTags &&
+      hasRequiredLocation &&
+      activityDate &&
+      startTime &&
+      endTime &&
+      maxParticipants,
+  )
+
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true)
@@ -142,12 +155,12 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
         interests: parsedInterests,
         location: {
           address,
-          latitude: latitude ? Number(latitude) : 0,
-          longitude: longitude ? Number(longitude) : 0,
+          latitude: latitude ? Number(latitude) : null,
+          longitude: longitude ? Number(longitude) : null,
         },
         activityDate,
         startTime,
-        endTime: endTime || undefined,
+        endTime,
         maxParticipants: isPremium ? Number(maxParticipants) : 4,
         isPublic,
         groupId: isPremium ? groupId : undefined,
@@ -188,7 +201,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
             Back to activity
           </Link>
         </Button>
-        <Button onClick={handleSubmit} disabled={!activity || isSubmitting} className="gap-2">
+        <Button onClick={handleSubmit} disabled={!activity || !canSubmit || isSubmitting} className="gap-2">
           <Save className="h-4 w-4" />
           Save changes
         </Button>
@@ -201,26 +214,28 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
         <CardContent className="space-y-4">
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" required />
           <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
-          <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Category" />
+          <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Category" required />
           <Input
             value={interests}
             onChange={(e) => setInterests(e.target.value)}
             placeholder="Interests (comma separated, e.g. sports, football)"
+            required
           />
           <p className="text-xs text-muted-foreground">
             Interests are stored as slugs (lowercase with underscores). We convert your input automatically.
           </p>
 
           <div className="grid gap-3 md:grid-cols-3">
-            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" />
+            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" required />
             <Input
               type="number"
               step="any"
               value={latitude}
               onChange={(e) => setLatitude(e.target.value)}
               placeholder="Latitude"
+              required
             />
             <Input
               type="number"
@@ -228,13 +243,14 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
               value={longitude}
               onChange={(e) => setLongitude(e.target.value)}
               placeholder="Longitude"
+              required
             />
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">
-            <Input type="date" value={activityDate} onChange={(e) => setActivityDate(e.target.value)} />
-            <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-            <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+            <Input type="date" value={activityDate} onChange={(e) => setActivityDate(e.target.value)} required />
+            <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
+            <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
