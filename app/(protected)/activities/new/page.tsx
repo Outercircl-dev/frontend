@@ -1,16 +1,20 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CalendarDays, Save } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ArrowLeft, CalendarDays, Check, Save } from 'lucide-react'
 
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { getInterestsAction } from '@/actions/profile'
 import { useAuthState } from '@/hooks/useAuthState'
+import { cn } from '@/lib/utils'
+import type { InterestCategory } from '@/lib/types/profile'
 
 type Group = {
   id: string
@@ -25,7 +29,7 @@ export default function CreateActivityPage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('')
-  const [interests, setInterests] = useState('')
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([])
   const [address, setAddress] = useState('')
   const [latitude, setLatitude] = useState('')
   const [longitude, setLongitude] = useState('')
@@ -43,6 +47,9 @@ export default function CreateActivityPage() {
   const [occurrences, setOccurrences] = useState('')
 
   const [groups, setGroups] = useState<Group[]>([])
+  const [interestCategories, setInterestCategories] = useState<InterestCategory[]>([])
+  const [interestsLoading, setInterestsLoading] = useState(true)
+  const [interestsError, setInterestsError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -69,23 +76,25 @@ export default function CreateActivityPage() {
     }
   }, [isPremium])
 
-  const parsedInterests = useMemo(
-    () =>
-      interests
-        .split(',')
-        .map((value) => value.trim())
-        .filter(Boolean)
-        .map((value) =>
-          value
-            .toLowerCase()
-            .replace(/\s+/g, '_')
-            .replace(/[^a-z0-9_]/g, ''),
-        ),
-    [interests],
-  )
+  useEffect(() => {
+    let cancelled = false
+    async function loadInterests() {
+      const result = await getInterestsAction()
+      if (cancelled) return
+      if (result.categories?.length) {
+        setInterestCategories(result.categories)
+      }
+      setInterestsError(result.error)
+      setInterestsLoading(false)
+    }
+    loadInterests()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const hasRequiredLocation = Boolean(address.trim() && latitude.trim() && longitude.trim())
-  const hasRequiredTags = parsedInterests.length > 0
+  const hasRequiredTags = selectedInterests.length > 0
   const canSubmit = Boolean(
     title.trim() &&
       category.trim() &&
@@ -106,7 +115,7 @@ export default function CreateActivityPage() {
         title,
         description,
         category,
-        interests: parsedInterests,
+        interests: selectedInterests,
         location: {
           address,
           latitude: latitude ? Number(latitude) : null,
@@ -186,20 +195,64 @@ export default function CreateActivityPage() {
             </Label>
             <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Category" required />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label className="flex items-center gap-1">
               Interests <span className="text-red-500">*</span>
             </Label>
-            <Input
-              value={interests}
-              onChange={(e) => setInterests(e.target.value)}
-              placeholder="Interests (comma separated, e.g. sports, football)"
-              required
-            />
+            <div className="flex items-center gap-2">
+              <Badge variant={selectedInterests.length > 0 ? 'default' : 'secondary'}>
+                {selectedInterests.length} selected
+              </Badge>
+              <span className="text-xs text-muted-foreground">Choose at least 1 (up to 10).</span>
+            </div>
+            {interestsError ? <p className="text-xs text-destructive">{interestsError}</p> : null}
+            {interestsLoading ? (
+              <p className="text-sm text-muted-foreground">Loading interests...</p>
+            ) : (
+              <div className="max-h-[320px] space-y-4 overflow-y-auto pr-2">
+                {interestCategories.map((interestCategory) => (
+                  <div key={interestCategory.name} className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {interestCategory.name}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {interestCategory.interests.map((interest) => {
+                        const isSelected = selectedInterests.includes(interest.slug)
+                        const isDisabled = !isSelected && selectedInterests.length >= 10
+                        return (
+                          <button
+                            key={interest.slug}
+                            type="button"
+                            onClick={() => {
+                              setSelectedInterests((prev) =>
+                                prev.includes(interest.slug)
+                                  ? prev.filter((slug) => slug !== interest.slug)
+                                  : prev.length < 10
+                                    ? [...prev, interest.slug]
+                                    : prev,
+                              )
+                            }}
+                            disabled={isDisabled}
+                            className={cn(
+                              'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-medium transition-all',
+                              isSelected
+                                ? 'border-primary bg-primary/10 text-primary'
+                                : 'border-border bg-background text-foreground hover:border-primary/50 hover:bg-primary/5',
+                              isDisabled && 'cursor-not-allowed opacity-50',
+                            )}
+                          >
+                            <span>{interest.icon}</span>
+                            <span>{interest.name}</span>
+                            {isSelected ? <Check className="h-3.5 w-3.5" /> : null}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Interests are stored as slugs (lowercase with underscores). We convert your input automatically.
-          </p>
 
           <div className="grid gap-3 md:grid-cols-3">
             <div className="space-y-2">
