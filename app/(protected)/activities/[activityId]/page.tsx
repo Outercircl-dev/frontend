@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { use, useMemo, useState } from 'react'
-import { ArrowLeft, CalendarDays, Clock, LogOut, MapPin, Users } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Clock, LogOut, MapPin, Pin, Users } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuthState } from '@/hooks/useAuthState'
+import { useActivityMessages } from '@/hooks/useActivityMessages'
 import { useParticipation } from '@/hooks/useParticipation'
 import type { ParticipationState } from '@/lib/types/activity'
 
@@ -25,9 +26,23 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     const { activityId } = use(params)
     const { activity, isLoading, error, join, cancel } = useParticipation(activityId)
     const { user } = useAuthState()
+    const {
+        messages,
+        pinned,
+        isLoading: messagesLoading,
+        error: messagesError,
+        postMessage,
+        pinMessage,
+        reportMessage,
+    } = useActivityMessages(activityId)
     const [joinMessage, setJoinMessage] = useState('')
     const [actionError, setActionError] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [messageText, setMessageText] = useState('')
+    const [messageError, setMessageError] = useState<string | null>(null)
+    const [isSendingMessage, setIsSendingMessage] = useState(false)
+    const [sendAnnouncement, setSendAnnouncement] = useState(false)
+    const [sendPinned, setSendPinned] = useState(false)
 
     const viewerStatus: ParticipationState | 'not_joined' = activity?.viewerParticipation?.status ?? 'not_joined'
     const isHost = user?.supabaseUserId && activity?.hostId === user.supabaseUserId
@@ -63,6 +78,36 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
             setActionError(err instanceof Error ? err.message : 'Failed to cancel participation')
         } finally {
             setIsSubmitting(false)
+        }
+    }
+
+    const handleSendMessage = async () => {
+        if (!messageText.trim()) return
+        try {
+            setIsSendingMessage(true)
+            setMessageError(null)
+            await postMessage({
+                content: messageText.trim(),
+                messageType: sendAnnouncement ? 'announcement' : 'user',
+                isPinned: sendPinned,
+            })
+            setMessageText('')
+            setSendPinned(false)
+            setSendAnnouncement(false)
+        } catch (err) {
+            setMessageError(err instanceof Error ? err.message : 'Failed to send message')
+        } finally {
+            setIsSendingMessage(false)
+        }
+    }
+
+    const handleReport = async (messageId: string) => {
+        const reason = window.prompt('Why are you reporting this message?')
+        if (!reason) return
+        try {
+            await reportMessage(messageId, reason)
+        } catch (err) {
+            setMessageError(err instanceof Error ? err.message : 'Failed to report message')
         }
     }
 
@@ -228,6 +273,108 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                         </div>
                                     )}
                                 </div>
+                                <Card className="border-dashed">
+                                    <CardHeader>
+                                        <CardTitle>Group messages</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        {messagesError ? (
+                                            <p className="text-sm text-red-600">{messagesError}</p>
+                                        ) : null}
+                                        {pinned ? (
+                                            <div className="rounded-md border border-primary/40 bg-primary/5 p-3 text-sm">
+                                                <div className="flex items-center gap-2 text-primary">
+                                                    <Pin className="h-4 w-4" />
+                                                    <span className="text-xs uppercase tracking-wide">Pinned announcement</span>
+                                                </div>
+                                                <p className="mt-2 text-sm text-foreground">{pinned.content}</p>
+                                            </div>
+                                        ) : null}
+                                        <div className="space-y-3">
+                                            {messagesLoading ? (
+                                                <Skeleton className="h-16 w-full" />
+                                            ) : messages.length === 0 ? (
+                                                <p className="text-sm text-muted-foreground">No messages yet.</p>
+                                            ) : (
+                                                messages.map((message) => (
+                                                    <div
+                                                        key={message.id}
+                                                        className="rounded-md border bg-background p-3 text-sm space-y-2"
+                                                    >
+                                                        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                                                            <span>
+                                                                {message.authorName || (message.messageType === 'system' ? 'System' : 'Participant')}
+                                                            </span>
+                                                            <span className="flex items-center gap-2">
+                                                                {message.messageType !== 'user' ? (
+                                                                    <Badge variant="outline" className="capitalize">
+                                                                        {message.messageType}
+                                                                    </Badge>
+                                                                ) : null}
+                                                                {message.isPinned ? (
+                                                                    <Badge variant="outline">Pinned</Badge>
+                                                                ) : null}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm text-foreground">{message.content}</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {isHost ? (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => pinMessage(message.id, !message.isPinned)}
+                                                                >
+                                                                    {message.isPinned ? 'Unpin' : 'Pin'}
+                                                                </Button>
+                                                            ) : null}
+                                                            {message.messageType !== 'system' ? (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleReport(message.id)}
+                                                                >
+                                                                    Report
+                                                                </Button>
+                                                            ) : null}
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            {messageError ? <p className="text-sm text-red-600">{messageError}</p> : null}
+                                            <Textarea
+                                                placeholder="Send a message to the group"
+                                                value={messageText}
+                                                onChange={(event) => setMessageText(event.target.value)}
+                                            />
+                                            {isHost ? (
+                                                <div className="flex flex-wrap gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant={sendAnnouncement ? 'default' : 'outline'}
+                                                        size="sm"
+                                                        onClick={() => setSendAnnouncement((prev) => !prev)}
+                                                    >
+                                                        Announcement
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant={sendPinned ? 'default' : 'outline'}
+                                                        size="sm"
+                                                        onClick={() => setSendPinned((prev) => !prev)}
+                                                    >
+                                                        Pin message
+                                                    </Button>
+                                                </div>
+                                            ) : null}
+                                            <Button onClick={handleSendMessage} disabled={!messageText.trim() || isSendingMessage}>
+                                                {isSendingMessage ? 'Sending...' : 'Send message'}
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             </CardContent>
                         </Card>
                     </>
