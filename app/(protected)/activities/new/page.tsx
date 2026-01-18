@@ -7,6 +7,7 @@ import { ArrowLeft, CalendarDays, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuthState } from '@/hooks/useAuthState'
@@ -83,7 +84,18 @@ export default function CreateActivityPage() {
     [interests],
   )
 
-  const canSubmit = Boolean(title && activityDate && startTime && maxParticipants)
+  const hasRequiredLocation = Boolean(address.trim() && latitude.trim() && longitude.trim())
+  const hasRequiredTags = parsedInterests.length > 0
+  const canSubmit = Boolean(
+    title.trim() &&
+      category.trim() &&
+      hasRequiredTags &&
+      hasRequiredLocation &&
+      activityDate &&
+      startTime &&
+      endTime &&
+      maxParticipants,
+  )
 
   const handleSubmit = async () => {
     try {
@@ -102,7 +114,7 @@ export default function CreateActivityPage() {
         },
         activityDate,
         startTime,
-        endTime: endTime || undefined,
+        endTime,
         maxParticipants: isPremium ? Number(maxParticipants) : 4,
         isPublic,
         groupId: isPremium ? groupId : undefined,
@@ -158,28 +170,77 @@ export default function CreateActivityPage() {
         <CardContent className="space-y-4">
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
-          <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Category" />
-          <Input
-            value={interests}
-            onChange={(e) => setInterests(e.target.value)}
-            placeholder="Interests (comma separated, e.g. sports, football)"
-          />
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1">
+              Title <span className="text-red-500">*</span>
+            </Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" required />
+          </div>
+          <div className="space-y-2">
+            <Label>Description</Label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
+          </div>
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1">
+              Category <span className="text-red-500">*</span>
+            </Label>
+            <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Category" required />
+          </div>
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1">
+              Interests <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              value={interests}
+              onChange={(e) => setInterests(e.target.value)}
+              placeholder="Interests (comma separated, e.g. sports, football)"
+              required
+            />
+          </div>
           <p className="text-xs text-muted-foreground">
             Interests are stored as slugs (lowercase with underscores). We convert your input automatically.
           </p>
 
           <div className="grid gap-3 md:grid-cols-3">
-            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" />
-            <Input value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="Latitude" />
-            <Input value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="Longitude" />
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                Address <span className="text-red-500">*</span>
+              </Label>
+              <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" required />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                Latitude <span className="text-red-500">*</span>
+              </Label>
+              <Input value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="Latitude" required />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                Longitude <span className="text-red-500">*</span>
+              </Label>
+              <Input value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="Longitude" required />
+            </div>
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">
-            <Input type="date" value={activityDate} onChange={(e) => setActivityDate(e.target.value)} />
-            <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-            <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                Date <span className="text-red-500">*</span>
+              </Label>
+              <Input type="date" value={activityDate} onChange={(e) => setActivityDate(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                Start time <span className="text-red-500">*</span>
+              </Label>
+              <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                End time <span className="text-red-500">*</span>
+              </Label>
+              <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
+            </div>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
