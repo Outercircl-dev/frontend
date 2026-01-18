@@ -21,7 +21,8 @@ function formatTime(dateString: string, timeString: string) {
   return dt.toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit' })
 }
 
-function titleCase(value: string) {
+function titleCase(value: string | null | undefined, fallback = '') {
+  if (!value) return fallback
   return value
     .replaceAll('_', ' ')
     .split(' ')
@@ -50,7 +51,7 @@ export function ActivityCard({ activity, viewerId }: { activity: Activity; viewe
             <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{activity.description}</p>
           </div>
           <Badge variant="secondary" className="shrink-0">
-            {titleCase(activity.category)}
+            {titleCase(activity.category, 'Unknown')}
           </Badge>
         </div>
 
