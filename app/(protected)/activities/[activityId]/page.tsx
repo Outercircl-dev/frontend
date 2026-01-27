@@ -2,15 +2,18 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { use, useMemo, useState } from 'react'
+import { use, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, CalendarDays, Clock, LogOut, MapPin, Pin, Users } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuthState } from '@/hooks/useAuthState'
+import { useActivityFeedback } from '@/hooks/useActivityFeedback'
 import { useActivityMessages } from '@/hooks/useActivityMessages'
 import { useParticipation } from '@/hooks/useParticipation'
 import type { ParticipationState } from '@/lib/types/activity'
@@ -35,6 +38,12 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
         pinMessage,
         reportMessage,
     } = useActivityMessages(activityId)
+    const {
+        form: feedbackForm,
+        isLoading: feedbackLoading,
+        error: feedbackError,
+        submitFeedback,
+    } = useActivityFeedback(activityId)
     const [joinMessage, setJoinMessage] = useState('')
     const [actionError, setActionError] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -43,6 +52,12 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     const [isSendingMessage, setIsSendingMessage] = useState(false)
     const [sendAnnouncement, setSendAnnouncement] = useState(false)
     const [sendPinned, setSendPinned] = useState(false)
+    const [activityRating, setActivityRating] = useState<number | null>(null)
+    const [activityComment, setActivityComment] = useState('')
+    const [consentToAnalysis, setConsentToAnalysis] = useState(false)
+    const [participantRatings, setParticipantRatings] = useState<Record<string, { rating: number | null; comment: string }>>({})
+    const [feedbackSubmitError, setFeedbackSubmitError] = useState<string | null>(null)
+    const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
 
     const viewerStatus: ParticipationState | 'not_joined' = activity?.viewerParticipation?.status ?? 'not_joined'
     const isHost = user?.supabaseUserId && activity?.hostId === user.supabaseUserId
@@ -55,6 +70,32 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     const canCancel = !isHost && ['confirmed', 'pending', 'waitlisted'].includes(viewerStatus)
 
     const waitlistPosition = activity?.viewerParticipation?.waitlistPosition
+
+    useEffect(() => {
+        if (!feedbackForm) return
+        if (feedbackForm.feedback) {
+            setActivityRating(feedbackForm.feedback.rating)
+            setActivityComment(feedbackForm.feedback.comment ?? '')
+            setConsentToAnalysis(feedbackForm.feedback.consentToAnalysis)
+            const existingRatings = feedbackForm.feedback.participantRatings.reduce(
+                (acc, rating) => {
+                    acc[rating.profileId] = {
+                        rating: rating.rating,
+                        comment: rating.comment ?? '',
+                    }
+                    return acc
+                },
+                {} as Record<string, { rating: number | null; comment: string }>,
+            )
+            setParticipantRatings(existingRatings)
+        } else {
+            setActivityRating(null)
+            setActivityComment('')
+            setConsentToAnalysis(false)
+            setParticipantRatings({})
+        }
+        setFeedbackSubmitError(null)
+    }, [feedbackForm])
 
     const handleJoin = async () => {
         try {
@@ -108,6 +149,46 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
             await reportMessage(messageId, reason)
         } catch (err) {
             setMessageError(err instanceof Error ? err.message : 'Failed to report message')
+        }
+    }
+
+    const handleSubmitFeedback = async () => {
+        if (!activityRating) {
+            setFeedbackSubmitError('Please select an activity rating.')
+            return
+        }
+        if (!consentToAnalysis) {
+            setFeedbackSubmitError('Consent is required to submit feedback.')
+            return
+        }
+
+        const participantRatingsPayload = (feedbackForm?.participants ?? [])
+            .map((participant) => {
+                const rating = participantRatings[participant.profileId]?.rating ?? null
+                const comment = participantRatings[participant.profileId]?.comment ?? ''
+                return rating
+                    ? {
+                        profileId: participant.profileId,
+                        rating,
+                        comment: comment.trim() ? comment.trim() : undefined,
+                    }
+                    : null
+            })
+            .filter((item): item is NonNullable<typeof item> => item !== null)
+
+        try {
+            setIsSubmittingFeedback(true)
+            setFeedbackSubmitError(null)
+            await submitFeedback({
+                rating: activityRating,
+                comment: activityComment.trim() ? activityComment.trim() : undefined,
+                consentToAnalysis,
+                participantRatings: participantRatingsPayload,
+            })
+        } catch (err) {
+            setFeedbackSubmitError(err instanceof Error ? err.message : 'Failed to submit feedback')
+        } finally {
+            setIsSubmittingFeedback(false)
         }
     }
 
@@ -373,6 +454,170 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                                 {isSendingMessage ? 'Sending...' : 'Send message'}
                                             </Button>
                                         </div>
+                                    </CardContent>
+                                </Card>
+                                <Card className="border-dashed">
+                                    <CardHeader>
+                                        <CardTitle>Post-activity feedback</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        {feedbackLoading ? (
+                                            <Skeleton className="h-24 w-full" />
+                                        ) : feedbackError ? (
+                                            <p className="text-sm text-red-600">{feedbackError}</p>
+                                        ) : feedbackForm ? (
+                                            <>
+                                                {!feedbackForm.activityEnded ? (
+                                                    <p className="text-sm text-muted-foreground">
+                                                        Feedback opens after the activity ends.
+                                                    </p>
+                                                ) : feedbackForm.submitted ? (
+                                                    <div className="space-y-2 text-sm text-muted-foreground">
+                                                        <p>Thanks for sharing your feedback.</p>
+                                                        <p>
+                                                            Activity rating:{' '}
+                                                            <span className="font-medium text-foreground">
+                                                                {feedbackForm.feedback?.rating ?? '-'}
+                                                            </span>
+                                                        </p>
+                                                    </div>
+                                                ) : feedbackForm.eligible ? (
+                                                    <div className="space-y-5">
+                                                        <div className="space-y-2">
+                                                            <p className="text-sm font-medium text-foreground">
+                                                                Rate this activity
+                                                            </p>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {[1, 2, 3, 4, 5].map((rating) => (
+                                                                    <Button
+                                                                        key={rating}
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        variant={activityRating === rating ? 'default' : 'outline'}
+                                                                        onClick={() => setActivityRating(rating)}
+                                                                    >
+                                                                        {rating}
+                                                                    </Button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="activity-feedback-comment">
+                                                                Optional comment
+                                                            </Label>
+                                                            <Textarea
+                                                                id="activity-feedback-comment"
+                                                                value={activityComment}
+                                                                onChange={(event) => setActivityComment(event.target.value)}
+                                                                placeholder="Share anything that stood out."
+                                                            />
+                                                        </div>
+
+                                                        {feedbackForm.participants.length > 0 ? (
+                                                            <div className="space-y-3">
+                                                                <p className="text-sm font-medium text-foreground">
+                                                                    Rate other participants
+                                                                </p>
+                                                                <div className="space-y-4">
+                                                                    {feedbackForm.participants.map((participant) => {
+                                                                        const current = participantRatings[participant.profileId]
+                                                                        return (
+                                                                            <div
+                                                                                key={participant.profileId}
+                                                                                className="rounded-md border bg-background p-3 space-y-3"
+                                                                            >
+                                                                                <div className="flex items-center justify-between gap-3">
+                                                                                    <div>
+                                                                                        <p className="text-sm font-medium text-foreground">
+                                                                                            {participant.fullName ?? 'Participant'}
+                                                                                            {participant.isHost ? ' (Host)' : ''}
+                                                                                        </p>
+                                                                                        {participant.ratingSummary ? (
+                                                                                            <p className="text-xs text-muted-foreground">
+                                                                                                Avg rating:{' '}
+                                                                                                {participant.ratingSummary.averageRating ?? 'N/A'} (
+                                                                                                {participant.ratingSummary.ratingsCount} ratings)
+                                                                                            </p>
+                                                                                        ) : null}
+                                                                                    </div>
+                                                                                    <div className="flex flex-wrap gap-1">
+                                                                                        {[1, 2, 3, 4, 5].map((rating) => (
+                                                                                            <Button
+                                                                                                key={rating}
+                                                                                                type="button"
+                                                                                                size="sm"
+                                                                                                variant={
+                                                                                                    current?.rating === rating
+                                                                                                        ? 'default'
+                                                                                                        : 'outline'
+                                                                                                }
+                                                                                                onClick={() =>
+                                                                                                    setParticipantRatings((prev) => ({
+                                                                                                        ...prev,
+                                                                                                        [participant.profileId]: {
+                                                                                                            rating,
+                                                                                                            comment: current?.comment ?? '',
+                                                                                                        },
+                                                                                                    }))
+                                                                                                }
+                                                                                            >
+                                                                                                {rating}
+                                                                                            </Button>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                </div>
+                                                                                <Textarea
+                                                                                    value={current?.comment ?? ''}
+                                                                                    onChange={(event) =>
+                                                                                        setParticipantRatings((prev) => ({
+                                                                                            ...prev,
+                                                                                            [participant.profileId]: {
+                                                                                                rating: current?.rating ?? null,
+                                                                                                comment: event.target.value,
+                                                                                            },
+                                                                                        }))
+                                                                                    }
+                                                                                    placeholder="Optional comment about this participant"
+                                                                                />
+                                                                            </div>
+                                                                        )
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        ) : null}
+
+                                                        <div className="flex items-start gap-3">
+                                                            <Checkbox
+                                                                id="feedback-consent"
+                                                                checked={consentToAnalysis}
+                                                                onCheckedChange={(checked) => setConsentToAnalysis(Boolean(checked))}
+                                                            />
+                                                            <Label htmlFor="feedback-consent" className="text-sm text-muted-foreground">
+                                                                I consent to OuterCircl using this feedback for analysis and safety insights.
+                                                            </Label>
+                                                        </div>
+
+                                                        {feedbackSubmitError ? (
+                                                            <p className="text-sm text-red-600">{feedbackSubmitError}</p>
+                                                        ) : null}
+
+                                                        <Button
+                                                            onClick={handleSubmitFeedback}
+                                                            disabled={isSubmittingFeedback}
+                                                        >
+                                                            {isSubmittingFeedback ? 'Submitting...' : 'Submit feedback'}
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {feedbackForm.reason ?? 'Feedback is not available yet.'}
+                                                    </p>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground">Feedback not available.</p>
+                                        )}
                                     </CardContent>
                                 </Card>
                             </CardContent>
