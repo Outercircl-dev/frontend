@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AdSlot } from '@/components/membership/AdSlot'
+import { UpgradeHint } from '@/components/membership/UpgradeHint'
 import { useAuthState } from '@/hooks/useAuthState'
 import type { ActivitiesResponse, Activity } from '@/lib/types/activity'
 
@@ -24,6 +26,11 @@ export default function ActivitiesPage() {
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const { user } = useAuthState()
+  const showAds = Boolean(user?.tierRules?.ads?.showsAds)
+  const groupsEnabled = user?.tierRules?.groups?.enabled ?? false
+  const requiresVerifiedHost = Boolean(user?.tierRules?.verification?.requiresVerifiedHostForHosting)
+  const isVerifiedHost = user?.role === 'authenticated'
+  const canHost = !requiresVerifiedHost || isVerifiedHost
 
   const fetchActivities = useCallback(() => {
     let cancelled = false
@@ -132,12 +139,30 @@ export default function ActivitiesPage() {
             <p className="text-sm text-muted-foreground">Everything you host or are attending, plus what’s trending.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button asChild variant="outline">
-              <Link href="/activities/new">Create activity</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/activities/groups">Groups</Link>
-            </Button>
+            <div className="flex flex-col items-start gap-1">
+              {canHost ? (
+                <Button asChild variant="outline">
+                  <Link href="/activities/new">Create activity</Link>
+                </Button>
+              ) : (
+                <Button variant="outline" disabled className="opacity-60">
+                  Create activity
+                </Button>
+              )}
+              {!canHost ? <UpgradeHint message="Hosting requires a verified plan." className="text-xs" /> : null}
+            </div>
+            <div className="flex flex-col items-start gap-1">
+              {groupsEnabled ? (
+                <Button asChild variant="outline">
+                  <Link href="/activities/groups">Groups</Link>
+                </Button>
+              ) : (
+                <Button variant="outline" disabled className="opacity-60">
+                  Groups
+                </Button>
+              )}
+              {!groupsEnabled ? <UpgradeHint message="Groups are available on higher tiers." className="text-xs" /> : null}
+            </div>
           </div>
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -149,6 +174,7 @@ export default function ActivitiesPage() {
             />
           </div>
         </div>
+        {showAds ? <AdSlot /> : null}
 
         {isLoading ? (
           <div className="space-y-4">

@@ -12,6 +12,8 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
+import { AdSlot } from '@/components/membership/AdSlot'
+import { UpgradeHint } from '@/components/membership/UpgradeHint'
 import { useAuthState } from '@/hooks/useAuthState'
 import { useActivityFeedback } from '@/hooks/useActivityFeedback'
 import { useActivityMessages } from '@/hooks/useActivityMessages'
@@ -29,6 +31,11 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     const { activityId } = use(params)
     const { activity, isLoading, error, join, cancel } = useParticipation(activityId)
     const { user } = useAuthState()
+    const tierRules = user?.tierRules
+    const showAds = Boolean(tierRules?.ads?.showsAds)
+    const messagingRules = tierRules?.messaging
+    const canUseGroupChat = messagingRules?.groupChatEnabled ?? true
+    const canUseAutomation = messagingRules?.automatedMessagesEnabled ?? true
     const {
         messages,
         pinned,
@@ -228,6 +235,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
             </header>
 
             <main className="mx-auto max-w-4xl space-y-6 px-4 py-10 sm:px-6 lg:px-0">
+                {showAds ? <AdSlot /> : null}
                 {isLoading ? (
                     <Card className="animate-in fade-in duration-500">
                         <CardHeader>
@@ -404,6 +412,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                                                     variant="ghost"
                                                                     size="sm"
                                                                     onClick={() => pinMessage(message.id, !message.isPinned)}
+                                                                    disabled={!canUseAutomation}
                                                                 >
                                                                     {message.isPinned ? 'Unpin' : 'Pin'}
                                                                 </Button>
@@ -429,7 +438,12 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                                 placeholder="Send a message to the group"
                                                 value={messageText}
                                                 onChange={(event) => setMessageText(event.target.value)}
+                                                disabled={!canUseGroupChat}
+                                                className={!canUseGroupChat ? 'opacity-60' : undefined}
                                             />
+                                            {!canUseGroupChat ? (
+                                                <UpgradeHint message="Messaging is limited on your current plan." className="text-xs" />
+                                            ) : null}
                                             {isHost ? (
                                                 <div className="flex flex-wrap gap-2">
                                                     <Button
@@ -437,6 +451,8 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                                         variant={sendAnnouncement ? 'default' : 'outline'}
                                                         size="sm"
                                                         onClick={() => setSendAnnouncement((prev) => !prev)}
+                                                        disabled={!canUseAutomation}
+                                                        className={!canUseAutomation ? 'opacity-60' : undefined}
                                                     >
                                                         Announcement
                                                     </Button>
@@ -445,12 +461,21 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                                         variant={sendPinned ? 'default' : 'outline'}
                                                         size="sm"
                                                         onClick={() => setSendPinned((prev) => !prev)}
+                                                        disabled={!canUseAutomation}
+                                                        className={!canUseAutomation ? 'opacity-60' : undefined}
                                                     >
                                                         Pin message
                                                     </Button>
                                                 </div>
                                             ) : null}
-                                            <Button onClick={handleSendMessage} disabled={!messageText.trim() || isSendingMessage}>
+                                            {!canUseAutomation && isHost ? (
+                                                <UpgradeHint message="Announcements require automation access." className="text-xs" />
+                                            ) : null}
+                                            <Button
+                                                onClick={handleSendMessage}
+                                                disabled={!canUseGroupChat || !messageText.trim() || isSendingMessage}
+                                                className={!canUseGroupChat ? 'opacity-60' : undefined}
+                                            >
                                                 {isSendingMessage ? 'Sending...' : 'Send message'}
                                             </Button>
                                         </div>

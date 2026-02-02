@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { UserAuthState, UserAuthStateType } from '@/lib/auth-state-machine';
-import { SubscriptionTier } from '@/lib/types/auth';
+import type { MembershipTierRules, TierKey } from '@/lib/types/auth';
 
 interface AuthUser {
   id: string;
   email: string;
   supabaseUserId: string;
-  type: SubscriptionTier;
+  role: string;
+  type: TierKey;
+  tierRules: MembershipTierRules;
 }
 
 interface AuthProfile {
