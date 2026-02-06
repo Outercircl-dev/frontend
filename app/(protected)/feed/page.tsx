@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AdSlot } from '@/components/membership/AdSlot'
 import { useAuthState } from '@/hooks/useAuthState'
 import type { ActivitiesResponse, Activity } from '@/lib/types/activity'
 
@@ -31,6 +32,7 @@ export default function FeedPage() {
   const [category, setCategory] = useState<string>('all')
   const [sort, setSort] = useState<'soonest' | 'newest'>('soonest')
   const { user } = useAuthState()
+  const showAds = Boolean(user?.tierRules?.ads?.showsAds)
 
   useEffect(() => {
     let cancelled = false
@@ -200,6 +202,7 @@ export default function FeedPage() {
             </Select>
           </div>
         </div>
+        {showAds ? <AdSlot /> : null}
 
         {error ? (
           <Card className="border-red-200/70 bg-red-50">

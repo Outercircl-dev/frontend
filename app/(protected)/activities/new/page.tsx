@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { UpgradeHint } from '@/components/membership/UpgradeHint'
 import { getInterestsAction } from '@/actions/profile'
 import { useAuthState } from '@/hooks/useAuthState'
 import { cn } from '@/lib/utils'
@@ -24,7 +25,18 @@ type Group = {
 
 export default function CreateActivityPage() {
   const { user } = useAuthState()
-  const isPremium = user?.type === 'PREMIUM'
+  const tierRules = user?.tierRules
+  const hostingRules = tierRules?.hosting
+  const groupsRules = tierRules?.groups
+  const verificationRules = tierRules?.verification
+  const maxParticipantsLimit = hostingRules?.maxParticipantsPerActivity
+  const enforceExactMaxParticipants = hostingRules?.enforceExactMaxParticipants
+  const groupsEnabled = groupsRules?.enabled ?? false
+  const requiresVerifiedHost = Boolean(verificationRules?.requiresVerifiedHostForHosting)
+  const isVerifiedHost = user?.role === 'authenticated'
+  const canHost = !requiresVerifiedHost || isVerifiedHost
+  const maxParticipantsDisabled =
+    Boolean(enforceExactMaxParticipants) && maxParticipantsLimit !== null && maxParticipantsLimit !== undefined
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -36,7 +48,7 @@ export default function CreateActivityPage() {
   const [activityDate, setActivityDate] = useState('')
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
-  const [maxParticipants, setMaxParticipants] = useState(isPremium ? '6' : '4')
+  const [maxParticipants, setMaxParticipants] = useState('')
   const [isPublic, setIsPublic] = useState(true)
   const [groupId, setGroupId] = useState<string | undefined>(undefined)
 
@@ -54,11 +66,16 @@ export default function CreateActivityPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
-    setMaxParticipants(isPremium ? '6' : '4')
-  }, [isPremium])
+    if (maxParticipantsLimit === null || maxParticipantsLimit === undefined) {
+      return
+    }
+    if (maxParticipantsDisabled || !maxParticipants) {
+      setMaxParticipants(String(maxParticipantsLimit))
+    }
+  }, [maxParticipantsDisabled, maxParticipantsLimit, maxParticipants])
 
   useEffect(() => {
-    if (!isPremium) return
+    if (!groupsEnabled) return
     let cancelled = false
     async function loadGroups() {
       try {
@@ -74,7 +91,7 @@ export default function CreateActivityPage() {
     return () => {
       cancelled = true
     }
-  }, [isPremium])
+  }, [groupsEnabled])
 
   useEffect(() => {
     let cancelled = false
@@ -104,12 +121,20 @@ export default function CreateActivityPage() {
       startTime &&
       endTime &&
       maxParticipants,
-  )
+  ) && canHost
 
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true)
       setError(null)
+
+      const numericMaxParticipants = Number(maxParticipants)
+      const resolvedMaxParticipants =
+        maxParticipantsLimit !== null &&
+        maxParticipantsLimit !== undefined &&
+        (maxParticipantsDisabled || numericMaxParticipants > maxParticipantsLimit)
+          ? maxParticipantsLimit
+          : numericMaxParticipants
 
       const payload = {
         title,
@@ -124,9 +149,9 @@ export default function CreateActivityPage() {
         activityDate,
         startTime,
         endTime,
-        maxParticipants: isPremium ? Number(maxParticipants) : 4,
+        maxParticipants: resolvedMaxParticipants,
         isPublic,
-        groupId: isPremium ? groupId : undefined,
+        groupId: groupsEnabled ? groupId : undefined,
         recurrence: recurrenceEnabled
           ? {
               frequency,
@@ -166,10 +191,15 @@ export default function CreateActivityPage() {
             Back to activities
           </Link>
         </Button>
-        <Button onClick={handleSubmit} disabled={!canSubmit || isSubmitting} className="gap-2">
-          <Save className="h-4 w-4" />
-          Create activity
-        </Button>
+        <div className="flex flex-col items-end gap-2">
+          <Button onClick={handleSubmit} disabled={!canSubmit || isSubmitting} className="gap-2">
+            <Save className="h-4 w-4" />
+            Create activity
+          </Button>
+          {!canHost ? (
+            <UpgradeHint message="Hosting requires a verified plan." className="text-xs" />
+          ) : null}
+        </div>
       </div>
 
       <Card>
@@ -297,12 +327,34 @@ export default function CreateActivityPage() {
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
-            <Input
-              value={maxParticipants}
-              onChange={(e) => setMaxParticipants(e.target.value)}
-              placeholder={isPremium ? 'Max participants' : 'Fixed at 4 for free tier'}
-              disabled={!isPremium}
-            />
+            <div className="space-y-2">
+              <Input
+                type="number"
+                min={1}
+                max={maxParticipantsLimit ?? undefined}
+                value={maxParticipants}
+                onChange={(e) => {
+                  const next = e.target.value
+                  if (!next) {
+                    setMaxParticipants('')
+                    return
+                  }
+                  const numeric = Number(next)
+                  if (Number.isNaN(numeric)) return
+                  if (maxParticipantsLimit !== null && maxParticipantsLimit !== undefined && numeric > maxParticipantsLimit) {
+                    setMaxParticipants(String(maxParticipantsLimit))
+                    return
+                  }
+                  setMaxParticipants(next)
+                }}
+                placeholder={maxParticipantsDisabled ? `Fixed at ${maxParticipantsLimit}` : 'Max participants'}
+                disabled={maxParticipantsDisabled}
+                className={cn(maxParticipantsDisabled && 'opacity-60')}
+              />
+              {maxParticipantsDisabled ? (
+                <UpgradeHint message="Adjusting participant limits is a premium feature." className="text-xs" />
+              ) : null}
+            </div>
             <Select value={isPublic ? 'public' : 'private'} onValueChange={(v) => setIsPublic(v === 'public')}>
               <SelectTrigger>
                 <SelectValue placeholder="Visibility" />
@@ -314,9 +366,13 @@ export default function CreateActivityPage() {
             </Select>
           </div>
 
-          {isPremium ? (
-            <Select value={groupId ?? 'none'} onValueChange={(v) => setGroupId(v === 'none' ? undefined : v)}>
-              <SelectTrigger>
+          <div className="space-y-2">
+            <Select
+              value={groupId ?? 'none'}
+              onValueChange={(v) => setGroupId(v === 'none' ? undefined : v)}
+              disabled={!groupsEnabled}
+            >
+              <SelectTrigger className={cn(!groupsEnabled && 'opacity-60')}>
                 <SelectValue placeholder="Select group (optional)" />
               </SelectTrigger>
               <SelectContent>
@@ -328,9 +384,10 @@ export default function CreateActivityPage() {
                 ))}
               </SelectContent>
             </Select>
-          ) : (
-            <p className="text-xs text-muted-foreground">Upgrade to premium to host activities in groups.</p>
-          )}
+            {!groupsEnabled ? (
+              <UpgradeHint message="Groups are available on higher tiers." className="text-xs" />
+            ) : null}
+          </div>
 
           <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
             <div className="flex items-center justify-between">

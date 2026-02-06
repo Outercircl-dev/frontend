@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { UpgradeHint } from '@/components/membership/UpgradeHint'
 import { useAuthState } from '@/hooks/useAuthState'
 
 type Group = {
@@ -20,15 +21,27 @@ type Group = {
 
 export default function GroupsPage() {
   const { user } = useAuthState()
-  const isPremium = user?.type === 'PREMIUM'
+  const tierRules = user?.tierRules
+  const groupsRules = tierRules?.groups
+  const groupsEnabled = groupsRules?.enabled ?? false
+  const maxMembersLimit = groupsRules?.maxMembers
 
   const [groups, setGroups] = useState<Group[]>([])
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [maxMembers, setMaxMembers] = useState('15')
+  const [maxMembers, setMaxMembers] = useState('')
   const [isPublic, setIsPublic] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (maxMembersLimit === null || maxMembersLimit === undefined) {
+      return
+    }
+    if (!maxMembers) {
+      setMaxMembers(String(maxMembersLimit))
+    }
+  }, [maxMembers, maxMembersLimit])
 
   useEffect(() => {
     let cancelled = false
@@ -52,6 +65,11 @@ export default function GroupsPage() {
     try {
       setIsSubmitting(true)
       setError(null)
+      const numericMaxMembers = Number(maxMembers)
+      const resolvedMaxMembers =
+        maxMembersLimit !== null && maxMembersLimit !== undefined && numericMaxMembers > maxMembersLimit
+          ? maxMembersLimit
+          : numericMaxMembers
       const res = await fetch('/rpc/v1/activities/groups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -59,7 +77,7 @@ export default function GroupsPage() {
           name,
           description,
           isPublic,
-          maxMembers: Number(maxMembers),
+          maxMembers: resolvedMaxMembers,
         }),
       })
       if (!res.ok) {
@@ -70,7 +88,11 @@ export default function GroupsPage() {
       setGroups((prev) => [group, ...prev])
       setName('')
       setDescription('')
-      setMaxMembers('15')
+      if (maxMembersLimit !== null && maxMembersLimit !== undefined) {
+        setMaxMembers(String(maxMembersLimit))
+      } else {
+        setMaxMembers('')
+      }
       setIsPublic(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create group')
@@ -93,32 +115,64 @@ export default function GroupsPage() {
           <CardTitle>Activity groups</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!isPremium ? (
-            <p className="text-sm text-muted-foreground">Upgrade to premium to create and manage groups.</p>
-          ) : (
-            <>
-              {error ? <p className="text-sm text-red-600">{error}</p> : null}
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Group name" />
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Description"
+          <>
+            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Group name"
+              disabled={!groupsEnabled}
+              className={!groupsEnabled ? 'opacity-60' : undefined}
+            />
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Description"
+              disabled={!groupsEnabled}
+              className={!groupsEnabled ? 'opacity-60' : undefined}
+            />
+            <div className="grid gap-3 md:grid-cols-2">
+              <Input
+                type="number"
+                min={1}
+                max={maxMembersLimit ?? undefined}
+                value={maxMembers}
+                onChange={(e) => {
+                  const next = e.target.value
+                  if (!next) {
+                    setMaxMembers('')
+                    return
+                  }
+                  const numeric = Number(next)
+                  if (Number.isNaN(numeric)) return
+                  if (maxMembersLimit !== null && maxMembersLimit !== undefined && numeric > maxMembersLimit) {
+                    setMaxMembers(String(maxMembersLimit))
+                    return
+                  }
+                  setMaxMembers(next)
+                }}
+                placeholder={maxMembersLimit ? `Max members (${maxMembersLimit})` : 'Max members'}
+                disabled={!groupsEnabled}
+                className={!groupsEnabled ? 'opacity-60' : undefined}
               />
-              <div className="grid gap-3 md:grid-cols-2">
-                <Input
-                  value={maxMembers}
-                  onChange={(e) => setMaxMembers(e.target.value)}
-                  placeholder="Max members (15)"
-                />
-                <Button variant={isPublic ? 'default' : 'outline'} onClick={() => setIsPublic((prev) => !prev)}>
-                  {isPublic ? 'Public group' : 'Private group'}
-                </Button>
-              </div>
-              <Button onClick={handleCreate} disabled={!name || isSubmitting}>
+              <Button
+                variant={isPublic ? 'default' : 'outline'}
+                onClick={() => setIsPublic((prev) => !prev)}
+                disabled={!groupsEnabled}
+                className={!groupsEnabled ? 'opacity-60' : undefined}
+              >
+                {isPublic ? 'Public group' : 'Private group'}
+              </Button>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <Button onClick={handleCreate} disabled={!groupsEnabled || !name || isSubmitting}>
                 Create group
               </Button>
-            </>
-          )}
+              {!groupsEnabled ? (
+                <UpgradeHint message="Group creation is available on higher tiers." className="text-xs" />
+              ) : null}
+            </div>
+          </>
         </CardContent>
       </Card>
 

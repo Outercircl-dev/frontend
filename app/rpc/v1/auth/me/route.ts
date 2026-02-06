@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getRedirectUrlForState, getUserAuthState } from '@/lib/auth-state-machine';
-import { BackendMeResponse, SubscriptionTier } from '@/lib/types/auth';
+import { BackendMeResponse, MembershipTierRules, TierKey } from '@/lib/types/auth';
 
 const API_URL = process.env.API_URL;
 
@@ -15,7 +15,9 @@ interface AuthMeResponse {
     id: string;
     email: string;
     supabaseUserId: string;
-    type: SubscriptionTier;
+    role: string;
+    type: TierKey;
+    tierRules: MembershipTierRules;
   };
   profile: {
     emailVerified: boolean;
@@ -116,7 +118,9 @@ export async function GET(request: NextRequest) {
         id: backendData.id,
         email: backendData.email,
         supabaseUserId: backendData.supabaseUserId,
-        type: backendData.type ?? SubscriptionTier.FREEMIUM, // Handle potential undefined from backend
+        role: backendData.role,
+        type: backendData.type,
+        tierRules: backendData.tierRules,
       },
       profile: {
         emailVerified,
