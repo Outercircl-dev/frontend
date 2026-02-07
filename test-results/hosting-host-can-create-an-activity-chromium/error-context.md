@@ -1,0 +1,100 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e6]:
+          - img "OuterCircl" [ref=e7]
+          - generic [ref=e8]:
+            - paragraph [ref=e9]: Your next activity
+            - generic [ref=e11]:
+              - generic [ref=e12]: Ocean Dip
+              - generic [ref=e13]: 3K Run
+              - generic [ref=e14]: Coffee Chats
+              - generic [ref=e15]: Ocean Dip
+              - generic [ref=e16]: 3K Run
+        - paragraph [ref=e17]: Our homepage spotlights real groups every week—cold plunges, coffee chats, toddler meetups, and more. Sign in to RSVP without missing the next invite.
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - generic [ref=e20]:
+            - paragraph [ref=e21]: Coming up
+            - heading "Featured community activities" [level=3] [ref=e22]
+          - generic [ref=e23]: 12 spots left
+        - generic [ref=e24]:
+          - article [ref=e25]:
+            - img "Salthill Cold Plunge" [ref=e27]
+            - generic [ref=e28]:
+              - generic [ref=e29]:
+                - generic [ref=e30]: Wed · 08:00
+                - heading "Salthill Cold Plunge" [level=4] [ref=e31]
+                - paragraph [ref=e32]: Build resilience with an invigorating sunrise dip.
+              - generic [ref=e33]:
+                - generic [ref=e34]:
+                  - img [ref=e35]
+                  - text: Wed · 08:00
+                - generic [ref=e37]:
+                  - img [ref=e38]
+                  - text: Salthill Beach
+          - article [ref=e41]:
+            - img "Coffee & Code Meetup" [ref=e43]
+            - generic [ref=e44]:
+              - generic [ref=e45]:
+                - generic [ref=e46]: Thu · 14:00
+                - heading "Coffee & Code Meetup" [level=4] [ref=e47]
+                - paragraph [ref=e48]: Co-work on side projects with the Galway crew.
+              - generic [ref=e49]:
+                - generic [ref=e50]:
+                  - img [ref=e51]
+                  - text: Thu · 14:00
+                - generic [ref=e53]:
+                  - img [ref=e54]
+                  - text: The Huntsman Pub
+          - article [ref=e57]:
+            - img "Weekend Hiking Group" [ref=e59]
+            - generic [ref=e60]:
+              - generic [ref=e61]:
+                - generic [ref=e62]: Sat · 09:00
+                - heading "Weekend Hiking Group" [level=4] [ref=e63]
+                - paragraph [ref=e64]: Moderate 8km trail through Connemara National Park.
+              - generic [ref=e65]:
+                - generic [ref=e66]:
+                  - img [ref=e67]
+                  - text: Sat · 09:00
+                - generic [ref=e69]:
+                  - img [ref=e70]
+                  - text: Lettergesh Trailhead
+      - generic [ref=e73]:
+        - paragraph [ref=e74]: New here? Bring a friend along and grow your circle faster.
+        - paragraph [ref=e75]:
+          - text: Having issues?
+          - link "Contact support" [ref=e76] [cursor=pointer]:
+            - /url: mailto:support@outercircl.com
+          - text: .
+    - generic [ref=e79]:
+      - generic [ref=e80]:
+        - generic [ref=e81]:
+          - paragraph [ref=e82]: RSVP Link
+          - heading "Check your inbox" [level=3] [ref=e83]
+          - paragraph [ref=e84]: Choose whether you're signing in or joining for the first time. We'll email you a secure invite either way.
+        - generic [ref=e85]:
+          - generic [ref=e86]:
+            - button "Sign in Returning member" [pressed] [ref=e87]:
+              - generic [ref=e88]: Sign in
+              - text: Returning member
+            - button "Join First-time guest" [ref=e89]:
+              - generic [ref=e90]: Join
+              - text: First-time guest
+          - generic [ref=e91]:
+            - generic [ref=e92]:
+              - text: Email
+              - textbox "Email" [ref=e93]:
+                - /placeholder: you@outercircl.com
+            - button "Send sign-in link" [ref=e94]
+          - paragraph [ref=e95]: We send a one-tap link so you can finish signing in on any device. It stays active for 24 hours to keep the community safe.
+      - paragraph [ref=e96]: By continuing you agree to the OuterCircl community guidelines and privacy promise.
+  - button "Open Next.js Dev Tools" [ref=e102] [cursor=pointer]:
+    - img [ref=e103]
+  - alert [ref=e106]
+```
