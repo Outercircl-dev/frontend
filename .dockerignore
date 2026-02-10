@@ -1,0 +1,29 @@
+# Dependencies and build output (installed/built inside the image)
+node_modules
+.next
+out
+build
+
+# Git and IDE
+.git
+.gitignore
+.cursor
+.vscode
+.idea
+*.code-workspace
+
+# Env and local config (injected at runtime or build-arg)
+.env*
+!.env.example
+
+# Misc
+.DS_Store
+*.log
+coverage
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+
+# Docs and dev-only (not needed for build)
+README.md
+docs
