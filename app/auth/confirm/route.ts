@@ -11,10 +11,14 @@ export async function GET(request: NextRequest) {
     const origin = SITE_URL ?? request.nextUrl.origin
     const requestUrl = new URL(request.url)
     const tokenHash = requestUrl.searchParams.get('token_hash');
+    const code = requestUrl.searchParams.get('code');
+    const errorCode = requestUrl.searchParams.get('error_code');
+    const errorDescription = requestUrl.searchParams.get('error_description');
     const supabase = await createClient();
 
     let accessToken: string | undefined;
     let session: Session | undefined;
+    const { data: currentSessionData } = await supabase.auth.getSession();
 
     // Handle token_hash (OTP verification) - if present, verify OTP
     if (tokenHash) {
@@ -32,11 +36,17 @@ export async function GET(request: NextRequest) {
         accessToken = data.session?.access_token;
         session = data.session ?? undefined;
     } else {
-        // No token_hash - this should not happen in normal flow
-        // Redirect to login with authentication error
-        const url = new URL('/login', origin);
-        url.searchParams.set('error', 'Authentication Unsuccessful');
-        return NextResponse.redirect(url);
+        // Proxy-based flow: code was already exchanged in middleware, so /auth/confirm
+        // may be called without token_hash but with a valid session cookie.
+        if (currentSessionData.session?.access_token) {
+            accessToken = currentSessionData.session.access_token;
+            session = currentSessionData.session;
+        } else {
+            // No token_hash and no session means real auth failure.
+            const url = new URL('/login', origin);
+            url.searchParams.set('error', 'Authentication Unsuccessful');
+            return NextResponse.redirect(url);
+        }
     }
 
     // Default redirect destination path

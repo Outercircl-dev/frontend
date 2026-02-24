@@ -14,6 +14,16 @@ export const availabilityOptions = [
 
 // Step 1: Basic Info Schema
 export const basicInfoSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(3, 'Username must be at least 3 characters')
+    .max(15, 'Username must be at most 15 characters')
+    .regex(
+      /^[a-z0-9_]+$/,
+      'Username can only contain lowercase letters, numbers, and underscores'
+    ),
   fullName: z
     .string()
     .min(2, 'Name must be at least 2 characters')
@@ -108,6 +118,7 @@ export type CompleteProfileData = z.infer<typeof completeProfileSchema>
 export const userProfileSchema = z.object({
   id: z.string().uuid(),
   user_id: z.string().uuid(),
+  username: z.string().nullable(),
   full_name: z.string().min(1),
   date_of_birth: z.string(), // ISO date string from backend
   gender: z.enum(genderOptions),
@@ -138,6 +149,7 @@ export const userProfileSchema = z.object({
 })
 
 export const defaultProfileValues = {
+  username: '',
   fullName: '',
   dateOfBirth: '',
   gender: '' as const,

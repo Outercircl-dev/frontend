@@ -23,6 +23,37 @@ function buildErrorsMap(details: Array<{ field: string; message: string }>) {
   }, {})
 }
 
+type ApiErrorBody = {
+  message?: string
+  details?: Array<{ field: string; message: string }>
+}
+
+function toApiErrorBody(value: unknown): ApiErrorBody {
+  if (!value || typeof value !== 'object') return {}
+  const candidate = value as { message?: unknown; details?: unknown }
+
+  const message =
+    typeof candidate.message === 'string' && candidate.message.trim().length > 0
+      ? candidate.message
+      : undefined
+
+  const details = Array.isArray(candidate.details)
+    ? candidate.details.filter(
+        (detail): detail is { field: string; message: string } =>
+          Boolean(
+            detail &&
+              typeof detail === 'object' &&
+              'field' in detail &&
+              'message' in detail &&
+              typeof (detail as { field?: unknown }).field === 'string' &&
+              typeof (detail as { message?: unknown }).message === 'string'
+          )
+      )
+    : undefined
+
+  return { message, details }
+}
+
 async function postProfile(payload: Record<string, unknown>): Promise<ProfileFormState> {
   const cookieHeader = await buildCookieHeader()
 
@@ -49,10 +80,11 @@ async function postProfile(payload: Record<string, unknown>): Promise<ProfileFor
     const body = contentType.includes('application/json') ? await response.json() : await response.text()
 
     if (!response.ok) {
-      const details = Array.isArray((body as any)?.details) ? (body as any).details : []
+      const parsedError = toApiErrorBody(body)
+      const details = parsedError.details ?? []
       return {
         status: 'error',
-        message: (body as any)?.message || DEFAULT_ERROR,
+        message: parsedError.message || DEFAULT_ERROR,
         errors: details.length ? buildErrorsMap(details) : undefined,
       }
     }
@@ -78,6 +110,7 @@ export async function completeProfileAction(
   formData: FormData
 ): Promise<ProfileFormState> {
   const rawData = {
+    username: formData.get('username') as string,
     fullName: formData.get('fullName') as string,
     dateOfBirth: formData.get('dateOfBirth') as string,
     gender: formData.get('gender') as string,

@@ -97,7 +97,7 @@ export function BasicInfoStep({ form, onNext }: BasicInfoStepProps) {
   }
 
   const handleSubmit = async () => {
-    const isValid = await form.trigger(['fullName', 'dateOfBirth', 'gender'])
+    const isValid = await form.trigger(['username', 'fullName', 'dateOfBirth', 'gender'])
     if (isValid) {
       onNext()
     }
@@ -162,6 +162,29 @@ export function BasicInfoStep({ form, onNext }: BasicInfoStepProps) {
 
       {/* Form Fields */}
       <div className="space-y-4">
+        <FormField
+          control={form.control}
+          name="username"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Username *</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="e.g. outercircl_friend"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription>
+                3-15 chars, lowercase letters, numbers, and underscores only.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="fullName"

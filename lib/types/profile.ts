@@ -13,6 +13,7 @@ export interface Availability {
 export interface UserProfile {
   id: string
   user_id: string
+  username: string | null
   full_name: string
   date_of_birth: string
   gender: Gender
@@ -60,6 +61,7 @@ export type OnboardingStep = 1 | 2 | 3 | 4
 // Form data type (allows empty strings during input)
 export interface OnboardingFormData {
   // Step 1: Basic Info
+  username: string
   fullName: string
   dateOfBirth: string
   gender: Gender | ''
@@ -81,6 +83,7 @@ export interface OnboardingFormData {
 // Validated onboarding data (after form validation)
 export interface OnboardingData {
   // Step 1: Basic Info
+  username: string
   fullName: string
   dateOfBirth: string
   gender: Gender
@@ -100,6 +103,7 @@ export interface OnboardingData {
 }
 
 export const defaultOnboardingData: OnboardingFormData = {
+  username: '',
   fullName: '',
   dateOfBirth: '',
   gender: '',
