@@ -79,6 +79,7 @@ export default function OnboardingProfilePage() {
     try {
       const data = form.getValues()
       const formData = new FormData()
+      formData.append('username', data.username.trim().toLowerCase())
       formData.append('fullName', data.fullName.trim())
       formData.append('dateOfBirth', data.dateOfBirth)
       formData.append('gender', data.gender)
