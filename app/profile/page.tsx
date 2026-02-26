@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 
 import { getProfileAction } from '@/actions/profile'
+import { ProfileNotificationsSection } from '@/components/notifications/ProfileNotificationsSection'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -447,6 +448,8 @@ export default async function ProfilePage() {
                                 </Button>
                             </CardContent>
                         </Card>
+
+                        <ProfileNotificationsSection />
                     </div>
                 </section>
             </main>
