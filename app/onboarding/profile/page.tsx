@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useForm, FormProvider } from 'react-hook-form'
+import { useForm, FormProvider, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -37,7 +37,7 @@ export default function OnboardingProfilePage() {
   const [savedProfile, setSavedProfile] = useState<UserProfile | null>(null)
 
   const form = useForm<OnboardingFormData>({
-    resolver: zodResolver(completeProfileSchema),
+    resolver: zodResolver(completeProfileSchema) as Resolver<OnboardingFormData>,
     defaultValues: defaultProfileValues,
     mode: 'onChange',
   })

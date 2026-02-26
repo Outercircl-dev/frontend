@@ -47,9 +47,10 @@ export const basicInfoSchema = z.object({
     },
     { message: 'You must be at least 18 years old' }
   ),
-  gender: z.enum(genderOptions, {
-    message: 'Please select a gender',
-  }),
+  // Allow empty string during form entry, then require selection at validation time.
+  gender: z
+    .union([z.enum(genderOptions), z.literal('')])
+    .refine((value) => value !== '', { message: 'Please select a gender' }),
 })
 
 // Step 2: Interests Schema
@@ -85,18 +86,21 @@ export const preferencesSchema = z.object({
 
 // Step 4: Guidelines Schema
 export const guidelinesSchema = z.object({
-  acceptedTos: z.literal(true, {
-    message: 'You must accept the Terms of Service',
-  }),
-  acceptedGuidelines: z.literal(true, {
-    message: 'You must accept the Community Guidelines',
-  }),
-  confirmedAge: z.literal(true, {
-    message: 'You must confirm you are 18 or older',
-  }),
-  confirmedPlatonic: z.literal(true, {
-    message: 'You must acknowledge OuterCircl is for platonic connections',
-  }),
+  // Keep checkbox inputs as booleans for form typing while enforcing true on submit.
+  acceptedTos: z
+    .boolean()
+    .refine((value) => value, { message: 'You must accept the Terms of Service' }),
+  acceptedGuidelines: z
+    .boolean()
+    .refine((value) => value, { message: 'You must accept the Community Guidelines' }),
+  confirmedAge: z
+    .boolean()
+    .refine((value) => value, { message: 'You must confirm you are 18 or older' }),
+  confirmedPlatonic: z
+    .boolean()
+    .refine((value) => value, {
+      message: 'You must acknowledge OuterCircl is for platonic connections',
+    }),
 })
 
 // Complete profile schema (all steps combined)
