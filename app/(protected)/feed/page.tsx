@@ -123,7 +123,7 @@ export default function FeedPage() {
 
   return (
     <div className="min-h-screen bg-muted/40">
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <Link href="/feed" className="flex items-center gap-3">
             <Image src="/logo.png" alt="OuterCircl" width={140} height={40} className="h-9 w-auto" priority />
