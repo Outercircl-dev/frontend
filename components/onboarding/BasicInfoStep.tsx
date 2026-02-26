@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { UseFormReturn } from 'react-hook-form'
 import { Camera, Loader2, X } from 'lucide-react'
 
@@ -39,10 +39,88 @@ const GENDER_OPTIONS = [
 export function BasicInfoStep({ form, onNext }: BasicInfoStepProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false)
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
+  const [hasTypedUsername, setHasTypedUsername] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const avatarUrl = form.watch('profilePictureUrl') || previewUrl || undefined
   const fullName = form.watch('fullName')
+  const username = form.watch('username')
+
+  useEffect(() => {
+    const normalizedUsername = (username ?? '').trim().toLowerCase()
+    const usernameRegex = /^[a-z0-9_]{3,15}$/
+
+    setUsernameAvailable(null)
+    setIsCheckingUsername(false)
+
+    if (!hasTypedUsername) {
+      return
+    }
+
+    // Force field-level validation on every edit so rule errors appear immediately.
+    void form.trigger('username')
+
+    if (!normalizedUsername || !usernameRegex.test(normalizedUsername)) {
+      return
+    }
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(async () => {
+      setIsCheckingUsername(true)
+
+      try {
+        const response = await fetch(
+          `/rpc/v1/profile/username-availability?username=${encodeURIComponent(normalizedUsername)}`,
+          {
+            method: 'GET',
+            signal: controller.signal,
+          }
+        )
+
+        const payload = await response.json()
+        if (!response.ok) {
+          form.setError('username', {
+            type: 'server',
+            message: payload?.message || 'Unable to validate username right now',
+          })
+          setUsernameAvailable(null)
+          return
+        }
+
+        if (payload?.available) {
+          setUsernameAvailable(true)
+          const currentError = form.getFieldState('username').error
+          if (currentError?.type === 'server') {
+            form.clearErrors('username')
+          }
+          return
+        }
+
+        setUsernameAvailable(false)
+        form.setError('username', {
+          type: 'server',
+          message: 'Username is already taken',
+        })
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          return
+        }
+        form.setError('username', {
+          type: 'server',
+          message: 'Unable to validate username right now',
+        })
+      } finally {
+        setIsCheckingUsername(false)
+      }
+    }, 350)
+
+    return () => {
+      controller.abort()
+      clearTimeout(timeoutId)
+    }
+  }, [form, hasTypedUsername, username])
 
   // Handle local preview - actual upload happens when profile is saved
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -175,11 +253,20 @@ export function BasicInfoStep({ form, onNext }: BasicInfoStepProps) {
                   autoCorrect="off"
                   spellCheck={false}
                   {...field}
+                  onChange={(event) => {
+                    setHasTypedUsername(true)
+                    field.onChange(event)
+                  }}
                 />
               </FormControl>
               <FormDescription>
                 3-15 chars, lowercase letters, numbers, and underscores only.
               </FormDescription>
+              {isCheckingUsername ? (
+                <p className="text-xs text-muted-foreground">Checking username availability...</p>
+              ) : usernameAvailable ? (
+                <p className="text-xs text-emerald-600">Username is available.</p>
+              ) : null}
               <FormMessage />
             </FormItem>
           )}

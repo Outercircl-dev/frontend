@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useForm, FormProvider } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 
@@ -15,7 +16,7 @@ import {
 } from '@/components/onboarding'
 import { getInterestsAction } from '@/actions/profile'
 import { completeProfileAction } from '@/actions/profile/complete-profile-action'
-import { defaultProfileValues } from '@/lib/validations/profile'
+import { completeProfileSchema, defaultProfileValues } from '@/lib/validations/profile'
 import type {
   OnboardingFormData,
   InterestCategory,
@@ -36,8 +37,9 @@ export default function OnboardingProfilePage() {
   const [savedProfile, setSavedProfile] = useState<UserProfile | null>(null)
 
   const form = useForm<OnboardingFormData>({
+    resolver: zodResolver(completeProfileSchema),
     defaultValues: defaultProfileValues,
-    mode: 'onBlur',
+    mode: 'onChange',
   })
 
   useEffect(() => {
