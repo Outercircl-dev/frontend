@@ -1,0 +1,50 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - banner [ref=e13]:
+      - generic [ref=e14]:
+        - link "OuterCircl" [ref=e15] [cursor=pointer]:
+          - /url: /feed
+          - img "OuterCircl" [ref=e16]
+        - generic [ref=e17]:
+          - link "Activities" [ref=e18] [cursor=pointer]:
+            - /url: /activities
+          - link "Activity details" [ref=e19] [cursor=pointer]:
+            - /url: /activities/activity-1
+          - button "Sign out" [ref=e21]:
+            - img [ref=e22]
+            - generic [ref=e25]: Sign out
+    - main [ref=e26]:
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - heading "Participant roster" [level=1] [ref=e29]
+          - paragraph [ref=e30]: Manage requests and waitlist.
+        - link "Back to activity" [ref=e31] [cursor=pointer]:
+          - /url: /activities/activity-1
+      - generic [ref=e32]:
+        - heading "Participants" [level=3] [ref=e34]
+        - table [ref=e37]:
+          - rowgroup [ref=e38]:
+            - row "Name Status Waitlist Actions" [ref=e39]:
+              - columnheader "Name" [ref=e40]
+              - columnheader "Status" [ref=e41]
+              - columnheader "Waitlist" [ref=e42]
+              - columnheader "Actions" [ref=e43]
+          - rowgroup [ref=e44]:
+            - row "Jamie Looking forward to it! pending — Approve Reject" [ref=e45]:
+              - cell "Jamie Looking forward to it!" [ref=e46]:
+                - generic [ref=e47]: Jamie
+                - paragraph [ref=e48]: Looking forward to it!
+              - cell "pending" [ref=e49]:
+                - generic [ref=e50]: pending
+              - cell "—" [ref=e51]
+              - cell "Approve Reject" [ref=e52]:
+                - generic [ref=e53]:
+                  - button "Approve" [disabled]
+                  - button "Reject" [disabled]
+```
