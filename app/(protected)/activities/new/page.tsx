@@ -14,6 +14,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { UpgradeHint } from '@/components/membership/UpgradeHint'
 import { getInterestsAction } from '@/actions/profile'
 import { useAuthState } from '@/hooks/useAuthState'
+import {
+  getCurrentDateInTimezone,
+  resolveClientTimezone,
+  validateActivityCreationInput,
+} from '@/src/utils/activityCreationValidation'
 import { cn } from '@/lib/utils'
 import type { InterestCategory } from '@/lib/types/profile'
 
@@ -112,6 +117,28 @@ export default function CreateActivityPage() {
 
   const hasRequiredLocation = Boolean(address.trim() && latitude.trim() && longitude.trim())
   const hasRequiredTags = selectedInterests.length > 0
+  const timezone = resolveClientTimezone()
+  const minActivityDate = getCurrentDateInTimezone(timezone)
+  const semanticValidationError =
+    activityDate && startTime && endTime && address.trim()
+      ? validateActivityCreationInput({
+          address,
+          activityDate,
+          startTime,
+          endTime,
+          timezone,
+        })
+      : null
+  const locationValidationError =
+    semanticValidationError && semanticValidationError.toLowerCase().includes('location')
+      ? semanticValidationError
+      : null
+  const scheduleValidationError =
+    semanticValidationError &&
+    (semanticValidationError.toLowerCase().includes('time') ||
+      semanticValidationError.toLowerCase().includes('date'))
+      ? semanticValidationError
+      : null
   const canSubmit = Boolean(
     title.trim() &&
       category.trim() &&
@@ -121,10 +148,14 @@ export default function CreateActivityPage() {
       startTime &&
       endTime &&
       maxParticipants,
-  ) && canHost
+  ) && canHost && !semanticValidationError
 
   const handleSubmit = async () => {
     try {
+      if (semanticValidationError) {
+        return
+      }
+
       setIsSubmitting(true)
       setError(null)
 
@@ -149,6 +180,7 @@ export default function CreateActivityPage() {
         activityDate,
         startTime,
         endTime,
+        timezone,
         maxParticipants: resolvedMaxParticipants,
         isPublic,
         groupId: groupsEnabled ? groupId : undefined,
@@ -207,8 +239,6 @@ export default function CreateActivityPage() {
           <CardTitle>Create a new activity</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
-
           <div className="space-y-2">
             <Label className="flex items-center gap-1">
               Title <span className="text-red-500">*</span>
@@ -304,13 +334,20 @@ export default function CreateActivityPage() {
               <Input value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="Longitude" required />
             </div>
           </div>
+          {locationValidationError ? <p className="text-sm text-red-600">{locationValidationError}</p> : null}
 
           <div className="grid gap-3 md:grid-cols-3">
             <div className="space-y-2">
               <Label className="flex items-center gap-1">
                 Date <span className="text-red-500">*</span>
               </Label>
-              <Input type="date" value={activityDate} onChange={(e) => setActivityDate(e.target.value)} required />
+              <Input
+                type="date"
+                min={minActivityDate}
+                value={activityDate}
+                onChange={(e) => setActivityDate(e.target.value)}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label className="flex items-center gap-1">
@@ -325,6 +362,7 @@ export default function CreateActivityPage() {
               <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
             </div>
           </div>
+          {scheduleValidationError ? <p className="text-sm text-red-600">{scheduleValidationError}</p> : null}
 
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-2">
@@ -429,6 +467,9 @@ export default function CreateActivityPage() {
               </p>
             )}
           </div>
+          {error && !locationValidationError && !scheduleValidationError ? (
+            <p className="text-sm text-red-600">{error}</p>
+          ) : null}
         </CardContent>
       </Card>
     </div>
