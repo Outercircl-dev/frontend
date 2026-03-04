@@ -13,6 +13,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { UpgradeHint } from '@/components/membership/UpgradeHint'
 import { useAuthState } from '@/hooks/useAuthState'
 import type { Activity } from '@/lib/types/activity'
+import { hasActivityStarted } from '@/src/utils/activityDateTime'
+import {
+  getCurrentDateInTimezone,
+  resolveClientTimezone,
+  validateActivityCreationInput,
+} from '@/src/utils/activityCreationValidation'
 
 type Group = {
   id: string
@@ -61,6 +67,8 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
   const [groups, setGroups] = useState<Group[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const timezone = resolveClientTimezone()
+  const minActivityDate = getCurrentDateInTimezone(timezone)
 
   useEffect(() => {
     if (maxParticipantsLimit === null || maxParticipantsLimit === undefined) {
@@ -84,6 +92,11 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
         if (cancelled) return
         if (user.id !== data.hostId) {
           setError('You are not authorized to edit this activity')
+          router.replace(`/activities/${data.id}`)
+          return
+        }
+        if (hasActivityStarted(data.activityDate, data.startTime)) {
+          setError('Activity has already started and can no longer be edited')
           router.replace(`/activities/${data.id}`)
           return
         }
@@ -154,6 +167,22 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
 
   const hasRequiredLocation = Boolean(address.trim() && latitude.trim() && longitude.trim())
   const hasRequiredTags = parsedInterests.length > 0
+  const semanticValidationError =
+    activityDate && startTime && endTime && address.trim()
+      ? validateActivityCreationInput({
+          address,
+          activityDate,
+          startTime,
+          endTime,
+          timezone,
+        })
+      : null
+  const scheduleValidationError =
+    semanticValidationError &&
+    (semanticValidationError.toLowerCase().includes('time') ||
+      semanticValidationError.toLowerCase().includes('date'))
+      ? semanticValidationError
+      : null
   const canSubmit = Boolean(
     title.trim() &&
       category.trim() &&
@@ -163,10 +192,13 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
       startTime &&
       endTime &&
       maxParticipants,
-  ) && canHost
+  ) && canHost && !semanticValidationError
 
   const handleSubmit = async () => {
     try {
+      if (semanticValidationError) {
+        return
+      }
       setIsSubmitting(true)
       setError(null)
       const numericMaxParticipants = Number(maxParticipants)
@@ -189,6 +221,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
         activityDate,
         startTime,
         endTime,
+        timezone,
         maxParticipants: resolvedMaxParticipants,
         isPublic,
         groupId: groupsEnabled ? groupId : undefined,
@@ -281,10 +314,17 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">
-            <Input type="date" value={activityDate} onChange={(e) => setActivityDate(e.target.value)} required />
+            <Input
+              type="date"
+              min={minActivityDate}
+              value={activityDate}
+              onChange={(e) => setActivityDate(e.target.value)}
+              required
+            />
             <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
             <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
           </div>
+          {scheduleValidationError ? <p className="text-sm text-red-600">{scheduleValidationError}</p> : null}
 
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-2">
