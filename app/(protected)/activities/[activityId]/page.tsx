@@ -3,12 +3,14 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { use, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CalendarDays, Clock, LogOut, MapPin, Pin, Users } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Clock, Lock, LogOut, MapPin, Pin, Users } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
+import { ErrorBlock } from '@/components/ui/error-block'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
@@ -74,11 +76,29 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     const locationLabel = activity?.meetingPointHidden
         ? 'Join to reveal exact meeting point'
         : activity?.location?.address ?? 'Unknown location'
+    const activityImageUrl = activity?.imageUrl || '/default-activity.svg'
 
     const canJoin = !isHost && viewerStatus === 'not_joined' && !activityStarted
     const canCancel = !isHost && ['confirmed', 'pending', 'waitlisted'].includes(viewerStatus)
 
     const waitlistPosition = activity?.viewerParticipation?.waitlistPosition
+    const messageAccessDenied = Boolean(
+        messagesError &&
+            /(not a participant|not participating|participant in this activity|only participants)/i.test(
+                messagesError,
+            ),
+    )
+    const messageAccessHint =
+        viewerStatus === 'not_joined'
+            ? 'Join this activity to view and send group messages.'
+            : viewerStatus === 'pending'
+                ? 'Messaging unlocks once the host approves your request.'
+                : viewerStatus === 'waitlisted'
+                    ? 'Messaging unlocks once you are moved from the waitlist to confirmed.'
+                    : 'Group messaging is currently unavailable.'
+    const showChatLockOverlay = messageAccessDenied
+    const showFeedbackLockOverlay = true
+    const composerDisabled = !canUseGroupChat || messageAccessDenied
 
     useEffect(() => {
         if (!feedbackForm) return
@@ -236,7 +256,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                 </div>
             </header>
 
-            <main className="mx-auto max-w-4xl space-y-6 px-4 py-10 sm:px-6 lg:px-0">
+            <main className="mx-auto max-w-7xl space-y-6 px-4 py-10 sm:px-6 lg:px-8">
                 {showAds ? <AdSlot /> : null}
                 {isLoading ? (
                     <Card className="animate-in fade-in duration-500">
@@ -250,12 +270,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                         </CardContent>
                     </Card>
                 ) : error ? (
-                    <Card className="border-red-200 bg-red-50 animate-in fade-in duration-500">
-                        <CardHeader>
-                            <CardTitle className="text-red-700">Unable to load activity</CardTitle>
-                        </CardHeader>
-                        <CardContent className="text-sm text-red-700/90">{error}</CardContent>
-                    </Card>
+                    <ErrorBlock title="Unable to load activity" message={error} />
                 ) : activity ? (
                     <>
                         <div className="flex items-center gap-3">
@@ -269,15 +284,49 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                         </div>
                         <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <CardHeader className="space-y-4">
-                                <div className="flex flex-col gap-2">
-                                    <Badge variant="outline" className="w-fit capitalize">
-                                        {activity.status}
-                                    </Badge>
-                                    <CardTitle className="text-3xl">{activity.title}</CardTitle>
-                                    <p className="text-muted-foreground">{activity.description}</p>
+                                <div className="flex flex-col gap-3">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="space-y-2">
+                                            <Badge variant="outline" className="w-fit capitalize">
+                                                {activity.status}
+                                            </Badge>
+                                            <CardTitle className="text-3xl">{activity.title}</CardTitle>
+                                            <p className="text-muted-foreground">{activity.description}</p>
+                                            <p className="text-sm text-muted-foreground">
+                                                Hosted by {activity.hostUsername || activity.hostName || activity.hostId.slice(0, 8)}
+                                            </p>
+                                        </div>
+                                        {!isHost ? (
+                                            <Button
+                                                size="lg"
+                                                onClick={handleJoin}
+                                                disabled={!canJoin || isSubmitting}
+                                                className="min-w-[180px]"
+                                            >
+                                                {viewerStatus === 'not_joined'
+                                                    ? activity.isPublic
+                                                        ? 'Join Activity'
+                                                        : 'Request to Join'
+                                                    : viewerStatus === 'pending'
+                                                        ? 'Request Pending'
+                                                        : viewerStatus === 'waitlisted'
+                                                            ? 'On Waitlist'
+                                                            : 'Joined'}
+                                            </Button>
+                                        ) : null}
+                                    </div>
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-6">
+                                <div className="grid items-stretch gap-6 lg:grid-cols-[1.4fr_1fr]">
+                                    <div className="space-y-6">
+                                    <div className="overflow-hidden rounded-xl border bg-muted/40">
+                                        <img
+                                            src={activityImageUrl}
+                                            alt={`${activity.title} cover image`}
+                                            className="h-64 w-full object-cover md:h-80"
+                                        />
+                                    </div>
                                 <div className="grid gap-4 text-sm text-muted-foreground sm:grid-cols-2">
                                     <div className="flex items-center gap-2">
                                         <CalendarDays className="h-4 w-4" />
@@ -308,7 +357,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                         </div>
                                         <p className="text-sm text-muted-foreground">{participationDescription}</p>
                                         {actionError ? (
-                                            <p className="text-sm text-red-600">{actionError}</p>
+                                            <ErrorBlock title="Action failed" message={actionError} />
                                         ) : null}
                                     </div>
 
@@ -375,15 +424,24 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                         </div>
                                     )}
                                 </div>
-                                <Card className="border-dashed">
+                                    </div>
+                                    <div className="h-full">
+                                <Card className="relative flex h-full flex-col overflow-hidden border-dashed">
                                     <CardHeader>
                                         <CardTitle>Group messages</CardTitle>
                                     </CardHeader>
-                                    <CardContent className="space-y-4">
+                                    <CardContent className="flex flex-1 flex-col space-y-4">
                                         {messagesError ? (
-                                            <p className="text-sm text-red-600">{messagesError}</p>
+                                            !messageAccessDenied ? (
+                                                <ErrorBlock title="Couldn't load messages" message={messagesError} />
+                                            ) : null
                                         ) : null}
-                                        {pinned ? (
+                                        <div
+                                            className={`flex min-h-0 flex-1 flex-col ${
+                                                showChatLockOverlay ? 'pointer-events-none select-none blur-[2px]' : ''
+                                            }`}
+                                        >
+                                            {pinned ? (
                                             <div className="rounded-md border border-primary/40 bg-primary/5 p-3 text-sm">
                                                 <div className="flex items-center gap-2 text-primary">
                                                     <Pin className="h-4 w-4" />
@@ -392,10 +450,10 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                                 <p className="mt-2 text-sm text-foreground">{pinned.content}</p>
                                             </div>
                                         ) : null}
-                                        <div className="space-y-3">
+                                        <div className="flex-1 space-y-3 overflow-y-auto pr-1">
                                             {messagesLoading ? (
                                                 <Skeleton className="h-16 w-full" />
-                                            ) : messages.length === 0 ? (
+                                            ) : messageAccessDenied ? null : messages.length === 0 ? (
                                                 <p className="text-sm text-muted-foreground">No messages yet.</p>
                                             ) : (
                                                 messages.map((message) => (
@@ -445,17 +503,28 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                             )}
                                         </div>
 
-                                        <div className="space-y-2">
-                                            {messageError ? <p className="text-sm text-red-600">{messageError}</p> : null}
-                                            <Textarea
+                                        <div className="space-y-2 border-t bg-background/90 pt-3 backdrop-blur-sm">
+                                            {messageError ? <ErrorBlock title="Couldn't send message" message={messageError} /> : null}
+                                            <div className="flex items-center gap-2">
+                                            <Input
                                                 placeholder="Send a message to the group"
                                                 value={messageText}
                                                 onChange={(event) => setMessageText(event.target.value)}
-                                                disabled={!canUseGroupChat}
-                                                className={!canUseGroupChat ? 'opacity-60' : undefined}
+                                                disabled={composerDisabled}
+                                                className={composerDisabled ? 'opacity-60' : undefined}
                                             />
+                                            <Button
+                                                onClick={handleSendMessage}
+                                                disabled={composerDisabled || !messageText.trim() || isSendingMessage}
+                                                className={composerDisabled ? 'opacity-60' : undefined}
+                                            >
+                                                {isSendingMessage ? 'Sending...' : 'Send'}
+                                            </Button>
+                                            </div>
                                             {!canUseGroupChat ? (
                                                 <UpgradeHint message="Messaging is limited on your current plan." className="text-xs" />
+                                            ) : messageAccessDenied ? (
+                                                <p className="text-xs text-muted-foreground">{messageAccessHint}</p>
                                             ) : null}
                                             {isHost ? (
                                                 <div className="flex flex-wrap gap-2">
@@ -484,31 +553,54 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                             {!canUseAutomation && isHost ? (
                                                 <UpgradeHint message="Announcements require automation access." className="text-xs" />
                                             ) : null}
-                                            <Button
-                                                onClick={handleSendMessage}
-                                                disabled={!canUseGroupChat || !messageText.trim() || isSendingMessage}
-                                                className={!canUseGroupChat ? 'opacity-60' : undefined}
-                                            >
-                                                {isSendingMessage ? 'Sending...' : 'Send message'}
-                                            </Button>
                                         </div>
+                                        </div>
+                                        {showChatLockOverlay ? (
+                                            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+                                                <div className="max-w-sm rounded-xl border bg-background/90 p-5 text-center shadow-lg">
+                                                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                                                        <Lock className="h-5 w-5 text-foreground" />
+                                                    </div>
+                                                    <p className="text-sm font-semibold text-foreground">Group chat unlocks after you join</p>
+                                                    <p className="mt-1 text-sm text-muted-foreground">
+                                                        Join this activity to view and send group messages.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ) : null}
                                     </CardContent>
                                 </Card>
-                                <Card className="border-dashed">
+                                    </div>
+                                </div>
+                                <Card className="relative overflow-hidden border-dashed">
                                     <CardHeader>
                                         <CardTitle>Post-activity feedback</CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
+                                        <div className={showFeedbackLockOverlay ? 'pointer-events-none select-none blur-[2px]' : ''}>
                                         {feedbackLoading ? (
                                             <Skeleton className="h-24 w-full" />
                                         ) : feedbackError ? (
-                                            <p className="text-sm text-red-600">{feedbackError}</p>
+                                            <ErrorBlock title="Couldn't load feedback" message={feedbackError} />
                                         ) : feedbackForm ? (
                                             <>
                                                 {!feedbackForm.activityEnded ? (
-                                                    <p className="text-sm text-muted-foreground">
-                                                        Feedback opens after the activity ends.
-                                                    </p>
+                                                    <div className="space-y-3">
+                                                        <p className="text-sm text-muted-foreground">
+                                                            Feedback opens after the activity ends.
+                                                        </p>
+                                                        <fieldset disabled className="space-y-2 opacity-60">
+                                                            <p className="text-sm font-medium text-foreground">Rate this activity</p>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {[1, 2, 3, 4, 5].map((rating) => (
+                                                                    <Button key={rating} type="button" size="sm" variant="outline">
+                                                                        {rating}
+                                                                    </Button>
+                                                                ))}
+                                                            </div>
+                                                            <Textarea placeholder="Survey will be enabled after the activity ends." />
+                                                        </fieldset>
+                                                    </div>
                                                 ) : feedbackForm.submitted ? (
                                                     <div className="space-y-2 text-sm text-muted-foreground">
                                                         <p>Thanks for sharing your feedback.</p>
@@ -637,7 +729,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                                         </div>
 
                                                         {feedbackSubmitError ? (
-                                                            <p className="text-sm text-red-600">{feedbackSubmitError}</p>
+                                                            <ErrorBlock title="Couldn't submit feedback" message={feedbackSubmitError} />
                                                         ) : null}
 
                                                         <Button
@@ -656,6 +748,20 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                         ) : (
                                             <p className="text-sm text-muted-foreground">Feedback not available.</p>
                                         )}
+                                        </div>
+                                        {showFeedbackLockOverlay ? (
+                                            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+                                                <div className="max-w-sm rounded-xl border bg-background/90 p-5 text-center shadow-lg">
+                                                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                                                        <Lock className="h-5 w-5 text-foreground" />
+                                                    </div>
+                                                    <p className="text-sm font-semibold text-foreground">Post-activity survey is locked</p>
+                                                    <p className="mt-1 text-sm text-muted-foreground">
+                                                        Survey responses unlock after completion criteria is met.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ) : null}
                                     </CardContent>
                                 </Card>
                             </CardContent>

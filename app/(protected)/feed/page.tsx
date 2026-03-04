@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { AlertCircle, ChevronLeft, ChevronRight, LogOut, Search, SlidersHorizontal } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LogOut, Search, SlidersHorizontal } from 'lucide-react'
 
 import { ActivityCard } from '@/components/activities/activity-card'
 import { Button } from '@/components/ui/button'
@@ -12,8 +12,11 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AdSlot } from '@/components/membership/AdSlot'
+import { ErrorBlock } from '@/components/ui/error-block'
 import { useAuthState } from '@/hooks/useAuthState'
 import type { ActivitiesResponse, Activity } from '@/lib/types/activity'
+import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
+import { hasActivityStarted } from '@/src/utils/activityDateTime'
 
 const DEFAULT_LIMIT = 20
 
@@ -30,7 +33,7 @@ export default function FeedPage() {
 
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<string>('all')
-  const [sort, setSort] = useState<'soonest' | 'newest'>('soonest')
+  const [sort, setSort] = useState<'latest' | 'oldest'>('latest')
   const { user } = useAuthState()
   const showAds = Boolean(user?.tierRules?.ads?.showsAds)
 
@@ -46,21 +49,16 @@ export default function FeedPage() {
         params.set('page', String(page))
         params.set('limit', String(limit))
 
-        const res = await fetch(`/rpc/v1/activities?${params.toString()}`, {
-          headers: { 'Content-Type': 'application/json' },
-        })
-
-        if (!res.ok) {
-          const text = await res.text()
-          throw new Error(text || `Request failed (${res.status})`)
-        }
-
-        const data = (await res.json()) as ActivitiesResponse
+        const data = await fetchJson<ActivitiesResponse>(
+          `/rpc/v1/activities?${params.toString()}`,
+          { method: 'GET', headers: { 'Content-Type': 'application/json' } },
+          'Failed to load activities',
+        )
         if (!cancelled) setRaw(data)
       } catch (e) {
         if (cancelled) return
         setRaw(null)
-        setError(e instanceof Error ? e.message : 'Failed to load activities')
+        setError(getErrorMessage(e, 'Failed to load activities'))
       } finally {
         if (!cancelled) setIsLoading(false)
       }
@@ -101,22 +99,23 @@ export default function FeedPage() {
 
     const matchesCategory = (a: Activity) => (category === 'all' ? true : a.category === category)
 
-    const parsedDate = (a: Activity) => {
-      const dt = new Date(`${a.activityDate}T${a.startTime}`)
-      return Number.isNaN(dt.getTime()) ? 0 : dt.getTime()
-    }
-
     const parsedCreated = (a: Activity) => {
       const dt = new Date(a.createdAt)
       return Number.isNaN(dt.getTime()) ? 0 : dt.getTime()
     }
 
-    const visible = items.filter((a) => matchesQuery(a) && matchesCategory(a))
+    const isUpcoming = (a: Activity) => {
+      if (a.status === 'completed' || a.status === 'cancelled') return false
+      return !hasActivityStarted(a.activityDate, a.startTime)
+    }
 
-    visible.sort((a, b) => {
-      if (sort === 'newest') return parsedCreated(b) - parsedCreated(a)
-      return parsedDate(a) - parsedDate(b)
-    })
+    const visible = items.filter((a) => isUpcoming(a) && matchesQuery(a) && matchesCategory(a))
+
+    visible.sort((a, b) =>
+      sort === 'latest'
+        ? parsedCreated(b) - parsedCreated(a)
+        : parsedCreated(a) - parsedCreated(b),
+    )
 
     return visible
   }, [raw, query, category, sort])
@@ -177,13 +176,13 @@ export default function FeedPage() {
               </SelectContent>
             </Select>
 
-            <Select value={sort} onValueChange={(v) => setSort(v as 'soonest' | 'newest')}>
+            <Select value={sort} onValueChange={(v) => setSort(v as 'latest' | 'oldest')}>
               <SelectTrigger>
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="soonest">Soonest</SelectItem>
-                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="latest">Latest</SelectItem>
+                <SelectItem value="oldest">Oldest</SelectItem>
               </SelectContent>
             </Select>
 
@@ -204,29 +203,7 @@ export default function FeedPage() {
         </div>
         {showAds ? <AdSlot /> : null}
 
-        {error ? (
-          <Card className="border-red-200/70 bg-red-50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-700">
-                <AlertCircle className="h-5 w-5" />
-                Couldn&apos;t load activities
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm text-red-700/90">
-              <pre className="whitespace-pre-wrap rounded-lg bg-white/60 p-3 text-xs text-red-700">
-                {error}
-              </pre>
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={() => setPage((p) => p)} variant="outline">
-                  Retry
-                </Button>
-                <Button asChild variant="outline">
-                  <Link href="/profile">Go to profile</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : null}
+        {error ? <ErrorBlock title="Couldn't load activities" message={error} onRetry={() => setPage((p) => p)} /> : null}
 
         {isLoading ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -303,7 +280,12 @@ export default function FeedPage() {
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {filteredItems.map((activity) => (
-                <ActivityCard key={activity.id} activity={activity} viewerId={user?.supabaseUserId} />
+                <ActivityCard
+                  key={activity.id}
+                  activity={activity}
+                  viewerId={user?.supabaseUserId}
+                  clickHref={`/activities/${activity.id}`}
+                />
               ))}
             </div>
           </div>

@@ -31,7 +31,15 @@ function titleCase(value: string | null | undefined, fallback = '') {
     .join(' ')
 }
 
-export function ActivityCard({ activity, viewerId }: { activity: Activity; viewerId?: string | null }) {
+export function ActivityCard({
+  activity,
+  viewerId,
+  clickHref,
+}: {
+  activity: Activity
+  viewerId?: string | null
+  clickHref?: string
+}) {
   const total = Math.max(0, activity.maxParticipants ?? 0)
   const current = Math.max(0, activity.currentParticipants ?? 0)
   const ratio = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0
@@ -41,9 +49,22 @@ export function ActivityCard({ activity, viewerId }: { activity: Activity; viewe
       ? 'Join to reveal exact meeting point'
       : activity.location?.address ?? 'Unknown location'
   const isHost = Boolean(viewerId && activity.hostId === viewerId)
+  const activityImageUrl = activity.imageUrl || '/default-activity.svg'
+  const hostLabel = activity.hostUsername || activity.hostName || activity.hostId.slice(0, 8)
 
-  return (
-    <Card className="group overflow-hidden border-muted/70 bg-background transition hover:-translate-y-0.5 hover:shadow-md">
+  const cardContent = (
+    <Card
+      className={`group overflow-hidden border-muted/70 bg-background transition hover:-translate-y-0.5 hover:shadow-md ${
+        clickHref ? 'cursor-pointer' : ''
+      }`}
+    >
+      <div className="aspect-[16/9] w-full overflow-hidden border-b bg-muted/40">
+        <img
+          src={activityImageUrl}
+          alt={`${activity.title} cover image`}
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+        />
+      </div>
       <CardHeader className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -70,8 +91,8 @@ export function ActivityCard({ activity, viewerId }: { activity: Activity; viewe
             {activity.isPublic ? <Globe className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
             {activity.isPublic ? 'Public' : 'Private'}
           </Badge>
-          <Badge variant="outline" className="font-mono text-xs">
-            Host {activity.hostId.slice(0, 8)}
+          <Badge variant="outline" className="text-xs">
+            Host {hostLabel}
           </Badge>
         </div>
       </CardHeader>
@@ -131,13 +152,27 @@ export function ActivityCard({ activity, viewerId }: { activity: Activity; viewe
             Waitlist:{' '}
             <span className="font-medium text-foreground">{activity.waitlistCount ?? 0}</span>
           </span>
-          <Button asChild variant="link" className="h-auto px-0 text-primary">
-            <Link href={`/activities/${activity.id}`}>View details</Link>
-          </Button>
+          {clickHref ? (
+            <span className="text-primary">View details</span>
+          ) : (
+            <Button asChild variant="link" className="h-auto px-0 text-primary">
+              <Link href={`/activities/${activity.id}`}>View details</Link>
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
   )
+
+  if (clickHref) {
+    return (
+      <Link href={clickHref} className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+        {cardContent}
+      </Link>
+    )
+  }
+
+  return cardContent
 }
 
 

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import type { FeedbackFormResponse, FeedbackSubmissionPayload, FeedbackSubmissionSummary } from '@/lib/types/feedback'
+import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
 
 export function useActivityFeedback(activityId: string) {
   const [form, setForm] = useState<FeedbackFormResponse | null>(null)
@@ -13,15 +14,14 @@ export function useActivityFeedback(activityId: string) {
     try {
       setIsLoading(true)
       setError(null)
-      const res = await fetch(`/rpc/v1/activities/${activityId}/feedback`)
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || `Failed to load feedback form (${res.status})`)
-      }
-      const data = (await res.json()) as FeedbackFormResponse
+      const data = await fetchJson<FeedbackFormResponse>(
+        `/rpc/v1/activities/${activityId}/feedback`,
+        { method: 'GET', headers: { 'Content-Type': 'application/json' } },
+        'Failed to load feedback form',
+      )
       setForm(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load feedback')
+      setError(getErrorMessage(err, 'Failed to load feedback'))
       setForm(null)
     } finally {
       setIsLoading(false)
@@ -30,18 +30,15 @@ export function useActivityFeedback(activityId: string) {
 
   const submitFeedback = useCallback(
     async (payload: FeedbackSubmissionPayload): Promise<FeedbackSubmissionSummary> => {
-      const res = await fetch(`/rpc/v1/activities/${activityId}/feedback`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload ?? {}),
-      })
-
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || `Failed to submit feedback (${res.status})`)
-      }
-
-      const data = (await res.json()) as FeedbackSubmissionSummary
+      const data = await fetchJson<FeedbackSubmissionSummary>(
+        `/rpc/v1/activities/${activityId}/feedback`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload ?? {}),
+        },
+        'Failed to submit feedback',
+      )
       setForm((prev) =>
         prev
           ? {

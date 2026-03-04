@@ -17,8 +17,11 @@ export interface ViewerParticipationMeta {
 export interface Activity {
   id: string
   hostId: string
+  hostUsername: string | null
+  hostName: string | null
   title: string
   description: string
+  imageUrl: string | null
   category: string
   interests: string[]
   location: ActivityLocation

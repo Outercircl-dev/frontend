@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { createClient } from '@/lib/supabase/client'
 import type { ActivityMessage, ActivityMessagesResponse, ActivityMessageType } from '@/lib/types/message'
+import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
 
 interface CreateMessagePayload {
   content: string
@@ -31,15 +32,14 @@ export function useActivityMessages(activityId: string) {
     try {
       setIsLoading(true)
       setError(null)
-      const res = await fetch(`/rpc/v1/activities/${activityId}/messages?limit=100`)
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || `Failed to load messages (${res.status})`)
-      }
-      const data = (await res.json()) as ActivityMessagesResponse
+      const data = await fetchJson<ActivityMessagesResponse>(
+        `/rpc/v1/activities/${activityId}/messages?limit=100`,
+        { method: 'GET', headers: { 'Content-Type': 'application/json' } },
+        'Failed to load messages',
+      )
       setMessages(sortMessages(data.items ?? []))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load messages')
+      setError(getErrorMessage(err, 'Unable to load messages'))
     } finally {
       setIsLoading(false)
     }
@@ -47,16 +47,15 @@ export function useActivityMessages(activityId: string) {
 
   const postMessage = useCallback(
     async (payload: CreateMessagePayload) => {
-      const res = await fetch(`/rpc/v1/activities/${activityId}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || `Failed to send message (${res.status})`)
-      }
-      const data = (await res.json()) as ActivityMessage
+      const data = await fetchJson<ActivityMessage>(
+        `/rpc/v1/activities/${activityId}/messages`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        'Failed to send message',
+      )
       setMessages((prev) => sortMessages([data, ...prev.filter((item) => item.id !== data.id)]))
       return data
     },
@@ -65,16 +64,15 @@ export function useActivityMessages(activityId: string) {
 
   const pinMessage = useCallback(
     async (messageId: string, isPinned: boolean) => {
-      const res = await fetch(`/rpc/v1/activities/${activityId}/messages/${messageId}/pin`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isPinned }),
-      })
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || `Failed to update pin (${res.status})`)
-      }
-      const data = (await res.json()) as ActivityMessage
+      const data = await fetchJson<ActivityMessage>(
+        `/rpc/v1/activities/${activityId}/messages/${messageId}/pin`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isPinned }),
+        },
+        'Failed to update pin',
+      )
       setMessages((prev) => {
         const next = prev.map((item) =>
           item.id === data.id ? data : isPinned && item.isPinned ? { ...item, isPinned: false } : item,
@@ -88,16 +86,15 @@ export function useActivityMessages(activityId: string) {
 
   const reportMessage = useCallback(
     async (messageId: string, reason: string, details?: string) => {
-      const res = await fetch(`/rpc/v1/activities/${activityId}/messages/${messageId}/report`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason, details }),
-      })
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || `Failed to report message (${res.status})`)
-      }
-      return res.json()
+      return fetchJson(
+        `/rpc/v1/activities/${activityId}/messages/${messageId}/report`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason, details }),
+        },
+        'Failed to report message',
+      )
     },
     [activityId],
   )
@@ -106,19 +103,22 @@ export function useActivityMessages(activityId: string) {
     fetchMessages()
   }, [fetchMessages])
 
-  const mapRealtimeMessage = useCallback((payload: Record<string, any>): ActivityMessage => {
+  const mapRealtimeMessage = useCallback((payload: Record<string, unknown>): ActivityMessage => {
     return {
-      id: payload.id,
-      activityId: payload.activity_id,
-      authorProfileId: payload.author_profile_id ?? null,
+      id: String(payload.id ?? ''),
+      activityId: String(payload.activity_id ?? ''),
+      authorProfileId: typeof payload.author_profile_id === 'string' ? payload.author_profile_id : null,
       authorName: null,
       authorAvatarUrl: null,
-      content: payload.content,
-      messageType: payload.message_type as ActivityMessageType,
+      content: String(payload.content ?? ''),
+      messageType: String(payload.message_type ?? 'user') as ActivityMessageType,
       isPinned: Boolean(payload.is_pinned),
-      metadata: (payload.metadata as Record<string, unknown>) ?? null,
-      createdAt: payload.created_at ?? null,
-      updatedAt: payload.updated_at ?? null,
+      metadata:
+        payload.metadata && typeof payload.metadata === 'object'
+          ? (payload.metadata as Record<string, unknown>)
+          : null,
+      createdAt: typeof payload.created_at === 'string' ? payload.created_at : null,
+      updatedAt: typeof payload.updated_at === 'string' ? payload.updated_at : null,
     }
   }, [])
 
@@ -136,11 +136,11 @@ export function useActivityMessages(activityId: string) {
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            const message = mapRealtimeMessage(payload.new as Record<string, any>)
+            const message = mapRealtimeMessage(payload.new as Record<string, unknown>)
             setMessages((prev) => sortMessages([message, ...prev.filter((item) => item.id !== message.id)]))
           }
           if (payload.eventType === 'UPDATE') {
-            const message = mapRealtimeMessage(payload.new as Record<string, any>)
+            const message = mapRealtimeMessage(payload.new as Record<string, unknown>)
             setMessages((prev) => sortMessages(prev.map((item) => (item.id === message.id ? message : item))))
           }
         },
