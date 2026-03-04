@@ -19,6 +19,7 @@ import { useActivityFeedback } from '@/hooks/useActivityFeedback'
 import { useActivityMessages } from '@/hooks/useActivityMessages'
 import { useParticipation } from '@/hooks/useParticipation'
 import type { ParticipationState } from '@/lib/types/activity'
+import { hasActivityStarted } from '@/src/utils/activityDateTime'
 
 const statusCopy: Record<ParticipationState | 'not_joined', string> = {
     not_joined: 'You have not joined this activity yet.',
@@ -68,12 +69,13 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
 
     const viewerStatus: ParticipationState | 'not_joined' = activity?.viewerParticipation?.status ?? 'not_joined'
     const isHost = user?.supabaseUserId && activity?.hostId === user.supabaseUserId
+    const activityStarted = activity ? hasActivityStarted(activity.activityDate, activity.startTime) : false
 
     const locationLabel = activity?.meetingPointHidden
         ? 'Join to reveal exact meeting point'
         : activity?.location?.address ?? 'Unknown location'
 
-    const canJoin = !isHost && viewerStatus === 'not_joined'
+    const canJoin = !isHost && viewerStatus === 'not_joined' && !activityStarted
     const canCancel = !isHost && ['confirmed', 'pending', 'waitlisted'].includes(viewerStatus)
 
     const waitlistPosition = activity?.viewerParticipation?.waitlistPosition
@@ -341,6 +343,11 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                                     Cancel participation
                                                 </Button>
                                             </div>
+                                            {activityStarted && viewerStatus === 'not_joined' ? (
+                                                <p className="text-sm text-muted-foreground">
+                                                    This activity has already started and can no longer be joined.
+                                                </p>
+                                            ) : null}
                                         </div>
                                     ) : (
                                         <div className="rounded-md border border-dashed border-muted-foreground/40 p-3 text-sm text-muted-foreground space-y-2">
@@ -352,9 +359,15 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                                 .
                                             </p>
                                             <div className="flex flex-wrap gap-2">
-                                                <Button asChild size="sm" variant="outline">
-                                                    <Link href={`/activities/${activity.id}/edit`}>Edit activity</Link>
-                                                </Button>
+                                                {activityStarted ? (
+                                                    <Button size="sm" variant="outline" disabled>
+                                                        Edit unavailable after start
+                                                    </Button>
+                                                ) : (
+                                                    <Button asChild size="sm" variant="outline">
+                                                        <Link href={`/activities/${activity.id}/edit`}>Edit activity</Link>
+                                                    </Button>
+                                                )}
                                                 <Button asChild size="sm" variant="outline">
                                                     <Link href="/activities/groups">Manage groups</Link>
                                                 </Button>
