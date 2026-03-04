@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { use, useEffect, useMemo, useState } from 'react'
+import { use, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, CalendarDays, Save } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { UpgradeHint } from '@/components/membership/UpgradeHint'
@@ -19,6 +20,9 @@ import {
   resolveClientTimezone,
   validateActivityCreationInput,
 } from '@/src/utils/activityCreationValidation'
+import { uploadActivityImage, validateActivityImage } from '@/lib/api/activity-image-upload'
+import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
+import { ErrorBlock } from '@/components/ui/error-block'
 
 type Group = {
   id: string
@@ -67,6 +71,11 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
   const [groups, setGroups] = useState<Group[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null)
+  const [removeImage, setRemoveImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const timezone = resolveClientTimezone()
   const minActivityDate = getCurrentDateInTimezone(timezone)
 
@@ -83,14 +92,14 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
     let cancelled = false
     async function loadActivity() {
       try {
-        if (!user?.id) return
-        const res = await fetch(`/rpc/v1/activities/${activityId}`)
-        if (!res.ok) {
-          throw new Error('Failed to load activity')
-        }
-        const data = (await res.json()) as Activity
+        if (!user?.supabaseUserId) return
+        const data = await fetchJson<Activity>(
+          `/rpc/v1/activities/${activityId}`,
+          { method: 'GET', headers: { 'Content-Type': 'application/json' } },
+          'Failed to load activity',
+        )
         if (cancelled) return
-        if (user.id !== data.hostId) {
+        if (user.supabaseUserId !== data.hostId) {
           setError('You are not authorized to edit this activity')
           router.replace(`/activities/${data.id}`)
           return
@@ -114,6 +123,9 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
         setMaxParticipants(String(data.maxParticipants))
         setIsPublic(Boolean(data.isPublic))
         setGroupId(data.group?.id ?? undefined)
+        setCurrentImageUrl(data.imageUrl ?? null)
+        setRemoveImage(false)
+        setImageFile(null)
         if (data.recurrence) {
           setRecurrenceEnabled(true)
           setFrequency(data.recurrence.frequency)
@@ -122,14 +134,24 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
           setOccurrences(data.recurrence.occurrences ? String(data.recurrence.occurrences) : '')
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load activity')
+        if (!cancelled) setError(getErrorMessage(err, 'Failed to load activity'))
       }
     }
     loadActivity()
     return () => {
       cancelled = true
     }
-  }, [activityId, router, user?.id])
+  }, [activityId, router, user?.supabaseUserId])
+
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreviewUrl(null)
+      return
+    }
+    const objectUrl = URL.createObjectURL(imageFile)
+    setImagePreviewUrl(objectUrl)
+    return () => URL.revokeObjectURL(objectUrl)
+  }, [imageFile])
 
   useEffect(() => {
     if (!groupsEnabled) return
@@ -233,21 +255,25 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
               occurrences: occurrences ? Number(occurrences) : undefined,
             }
           : undefined,
+        imageUrl: imageFile
+          ? await uploadActivityImage(imageFile)
+          : removeImage
+            ? null
+            : currentImageUrl,
       }
 
-      const res = await fetch(`/rpc/v1/activities/${activityId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || 'Failed to update activity')
-      }
-      const updated = (await res.json()) as Activity
+      const updated = await fetchJson<Activity>(
+        `/rpc/v1/activities/${activityId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        'Failed to update activity',
+      )
       router.push(`/activities/${updated.id}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update activity')
+      setError(getErrorMessage(err, 'Failed to update activity'))
     } finally {
       setIsSubmitting(false)
     }
@@ -278,10 +304,58 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
           <CardTitle>Edit activity</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          {error ? <ErrorBlock title="Couldn't update activity" message={error} /> : null}
 
           <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" required />
           <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
+          <div className="space-y-2">
+            <Label>Activity image</Label>
+            <Input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(event) => {
+                const selected = event.target.files?.[0] ?? null
+                if (!selected) {
+                  setImageFile(null)
+                  return
+                }
+                const validationError = validateActivityImage(selected)
+                if (validationError) {
+                  setError(validationError)
+                  event.target.value = ''
+                  return
+                }
+                setError(null)
+                setRemoveImage(false)
+                setImageFile(selected)
+              }}
+            />
+            <p className="text-xs text-muted-foreground">Optional. JPG, PNG, WEBP up to 5MB.</p>
+            {imagePreviewUrl || (currentImageUrl && !removeImage) ? (
+              <div className="space-y-2">
+                <img
+                  src={imagePreviewUrl || currentImageUrl || '/default-activity.svg'}
+                  alt="Activity image preview"
+                  className="h-44 w-full rounded-lg border object-cover"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setImageFile(null)
+                    setRemoveImage(true)
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = ''
+                    }
+                  }}
+                >
+                  Remove image
+                </Button>
+              </div>
+            ) : null}
+          </div>
           <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Category" required />
           <Input
             value={interests}

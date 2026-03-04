@@ -3,18 +3,21 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, LogOut, MapPin, Search } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, LogOut, MapPin, Search } from 'lucide-react'
 
 import { ActivityCard } from '@/components/activities/activity-card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AdSlot } from '@/components/membership/AdSlot'
 import { UpgradeHint } from '@/components/membership/UpgradeHint'
+import { ErrorBlock } from '@/components/ui/error-block'
 import { useAuthState } from '@/hooks/useAuthState'
 import type { ActivitiesResponse, Activity } from '@/lib/types/activity'
+import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
+import { hasActivityStarted } from '@/src/utils/activityDateTime'
 
 const DEFAULT_LIMIT = 20
 
@@ -25,6 +28,7 @@ export default function ActivitiesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [pastActivities, setPastActivities] = useState<Activity[]>([])
   const { user } = useAuthState()
   const showAds = Boolean(user?.tierRules?.ads?.showsAds)
   const groupsEnabled = user?.tierRules?.groups?.enabled ?? false
@@ -44,21 +48,16 @@ export default function ActivitiesPage() {
         params.set('page', String(page))
         params.set('limit', String(limit))
 
-        const res = await fetch(`/rpc/v1/activities?${params.toString()}`, {
-          headers: { 'Content-Type': 'application/json' },
-        })
-
-        if (!res.ok) {
-          const text = await res.text()
-          throw new Error(text || `Request failed (${res.status})`)
-        }
-
-        const data = (await res.json()) as ActivitiesResponse
+        const data = await fetchJson<ActivitiesResponse>(
+          `/rpc/v1/activities?${params.toString()}`,
+          { method: 'GET', headers: { 'Content-Type': 'application/json' } },
+          'Failed to load activities',
+        )
         if (!cancelled) setRaw(data)
       } catch (e) {
         if (cancelled) return
         setRaw(null)
-        setError(e instanceof Error ? e.message : 'Failed to load activities')
+        setError(getErrorMessage(e, 'Failed to load activities'))
       } finally {
         if (!cancelled) setIsLoading(false)
       }
@@ -69,6 +68,28 @@ export default function ActivitiesPage() {
       cancelled = true
     }
   }, [page, limit])
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadPast() {
+      try {
+        const res = await fetch('/rpc/v1/activities/joined/past?page=1&limit=20', {
+          headers: { 'Content-Type': 'application/json' },
+        })
+        if (!res.ok) return
+        const data = (await res.json()) as ActivitiesResponse
+        if (!cancelled) setPastActivities(data.items ?? [])
+      } catch {
+        if (!cancelled) setPastActivities([])
+      }
+    }
+    if (user?.supabaseUserId) {
+      loadPast()
+    }
+    return () => {
+      cancelled = true
+    }
+  }, [user?.supabaseUserId])
 
   useEffect(() => {
     return fetchActivities()
@@ -107,6 +128,30 @@ export default function ActivitiesPage() {
     const mine = new Set(myActivities.map((activity) => activity.id))
     return allItems.filter((activity) => !mine.has(activity.id))
   }, [allItems, myActivities, user])
+
+  const isOldActivity = useCallback((activity: Activity) => {
+    if (activity.status === 'completed' || activity.status === 'cancelled') return true
+    return hasActivityStarted(activity.activityDate, activity.startTime)
+  }, [])
+
+  const currentActivities = useMemo(
+    () => myActivities.filter((activity) => !isOldActivity(activity)),
+    [myActivities, isOldActivity],
+  )
+
+  const discoverActivities = useMemo(
+    () => upcomingActivities.filter((activity) => !isOldActivity(activity)),
+    [upcomingActivities, isOldActivity],
+  )
+
+  const oldActivities = useMemo(() => {
+    const merged = new Map<string, Activity>()
+    pastActivities.forEach((activity) => merged.set(activity.id, activity))
+    myActivities
+      .filter((activity) => isOldActivity(activity))
+      .forEach((activity) => merged.set(activity.id, activity))
+    return Array.from(merged.values())
+  }, [pastActivities, myActivities, isOldActivity])
 
   return (
     <div className="min-h-screen bg-muted/40">
@@ -188,43 +233,29 @@ export default function ActivitiesPage() {
             </Card>
           </div>
         ) : error ? (
-          <Card className="border-red-200/70 bg-red-50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-700">
-                <ArrowLeft className="h-4 w-4" />
-                Couldn&apos;t load activities
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-red-700/90">
-              <pre className="whitespace-pre-wrap break-words rounded-lg bg-white/70 p-3 text-xs text-red-700">
-                {error}
-              </pre>
-              <Button
-                onClick={() => {
-                  if (page !== 1) setPage(1)
-                  else fetchActivities()
-                }}
-                variant="outline"
-              >
-                Try again
-              </Button>
-            </CardContent>
-          </Card>
+          <ErrorBlock
+            title="Couldn't load activities"
+            message={error}
+            onRetry={() => {
+              if (page !== 1) setPage(1)
+              else fetchActivities()
+            }}
+          />
         ) : (
           <>
             <section className="space-y-3 rounded-xl border bg-background/80 p-4 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h2 className="text-lg font-semibold">You're part of these</h2>
+                  <h2 className="text-lg font-semibold">Current Activities</h2>
                   <p className="text-sm text-muted-foreground">
                     Quick actions for activities you host or have joined.
                   </p>
                 </div>
                 <Badge variant="secondary" className="text-xs">
-                  {myActivities.length} active
+                  {currentActivities.length} active
                 </Badge>
               </div>
-              {myActivities.length === 0 ? (
+              {currentActivities.length === 0 ? (
                 <Card className="border-dashed">
                   <CardContent className="flex flex-col items-center justify-center gap-2 py-6 text-center text-sm text-muted-foreground">
                     <CalendarDays className="h-5 w-5" />
@@ -233,7 +264,7 @@ export default function ActivitiesPage() {
                 </Card>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {myActivities.map((activity) => (
+                  {currentActivities.map((activity) => (
                     <ActivityCard
                       key={`mine-${activity.id}`}
                       activity={activity}
@@ -244,13 +275,16 @@ export default function ActivitiesPage() {
               )}
             </section>
 
-            <section className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Discover more</h2>
-                <span className="text-sm text-muted-foreground">{upcomingActivities.length} results</span>
+            <section className="space-y-3 rounded-xl border bg-background/80 p-4 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-lg font-semibold">Discover</h2>
+                  <p className="text-sm text-muted-foreground">Find upcoming activities you can still join.</p>
+                </div>
+                <span className="text-sm text-muted-foreground">{discoverActivities.length} results</span>
               </div>
-              {upcomingActivities.length === 0 ? (
-                <Card>
+              {discoverActivities.length === 0 ? (
+                <Card className="border-dashed">
                   <CardContent className="flex flex-col items-center justify-center gap-2 py-6 text-center text-sm text-muted-foreground">
                     <MapPin className="h-4 w-4" />
                     Nothing new matches your search right now.
@@ -258,9 +292,36 @@ export default function ActivitiesPage() {
                 </Card>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {upcomingActivities.map((activity) => (
+                  {discoverActivities.map((activity) => (
                     <ActivityCard
                       key={`discover-${activity.id}`}
+                      activity={activity}
+                      viewerId={user?.supabaseUserId}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">The Vault</h2>
+                <Badge variant="secondary" className="text-xs">
+                  {oldActivities.length} archived
+                </Badge>
+              </div>
+              {oldActivities.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center gap-2 py-6 text-center text-sm text-muted-foreground">
+                    <CalendarDays className="h-5 w-5" />
+                    No attended or closed activities yet.
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {oldActivities.map((activity) => (
+                    <ActivityCard
+                      key={`old-${activity.id}`}
                       activity={activity}
                       viewerId={user?.supabaseUserId}
                     />

@@ -9,7 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { UpgradeHint } from '@/components/membership/UpgradeHint'
+import { ErrorBlock } from '@/components/ui/error-block'
 import { useAuthState } from '@/hooks/useAuthState'
+import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
 
 type Group = {
   id: string
@@ -70,21 +72,20 @@ export default function GroupsPage() {
         maxMembersLimit !== null && maxMembersLimit !== undefined && numericMaxMembers > maxMembersLimit
           ? maxMembersLimit
           : numericMaxMembers
-      const res = await fetch('/rpc/v1/activities/groups', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          description,
-          isPublic,
-          maxMembers: resolvedMaxMembers,
-        }),
-      })
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || 'Failed to create group')
-      }
-      const group = (await res.json()) as Group
+      const group = await fetchJson<Group>(
+        '/rpc/v1/activities/groups',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            description,
+            isPublic,
+            maxMembers: resolvedMaxMembers,
+          }),
+        },
+        'Failed to create group',
+      )
       setGroups((prev) => [group, ...prev])
       setName('')
       setDescription('')
@@ -95,7 +96,7 @@ export default function GroupsPage() {
       }
       setIsPublic(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create group')
+      setError(getErrorMessage(err, 'Failed to create group'))
     } finally {
       setIsSubmitting(false)
     }
@@ -116,7 +117,7 @@ export default function GroupsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <>
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            {error ? <ErrorBlock title="Could not create group" message={error} /> : null}
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}

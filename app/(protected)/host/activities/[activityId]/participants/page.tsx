@@ -8,6 +8,8 @@ import { Loader2, LogOut } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ErrorBlock } from '@/components/ui/error-block'
+import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
 
 interface ParticipantSummary {
   id: string
@@ -32,15 +34,14 @@ export default function HostParticipantsPage({ params }: { params: Promise<{ act
     try {
       setIsLoading(true)
       setError(null)
-      const res = await fetch(`/rpc/v1/activities/${activityId}/participants`)
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || `Failed to load participants (${res.status})`)
-      }
-      const data = await res.json()
+      const data = await fetchJson<{ participants: ParticipantSummary[] }>(
+        `/rpc/v1/activities/${activityId}/participants`,
+        { method: 'GET', headers: { 'Content-Type': 'application/json' } },
+        'Failed to load participants',
+      )
       setParticipants(data.participants ?? [])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error loading participants')
+      setError(getErrorMessage(err, 'Unknown error loading participants'))
       setParticipants([])
     } finally {
       setIsLoading(false)
@@ -55,18 +56,18 @@ export default function HostParticipantsPage({ params }: { params: Promise<{ act
     try {
       setPendingId(participantId)
       setActionError(null)
-      const res = await fetch(`/rpc/v1/activities/${activityId}/participants/${participantId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
-      })
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || `Failed to ${action} participant (${res.status})`)
-      }
+      await fetchJson(
+        `/rpc/v1/activities/${activityId}/participants/${participantId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action }),
+        },
+        `Failed to ${action} participant`,
+      )
       await fetchRoster()
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to update participant')
+      setActionError(getErrorMessage(err, 'Failed to update participant'))
     } finally {
       setPendingId(null)
     }
@@ -108,12 +109,7 @@ export default function HostParticipantsPage({ params }: { params: Promise<{ act
         </div>
 
         {error ? (
-        <Card className="border-red-200 bg-red-50 animate-in fade-in duration-500">
-          <CardHeader>
-            <CardTitle className="text-red-700">Unable to load roster</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-red-700/90">{error}</CardContent>
-        </Card>
+        <ErrorBlock title="Unable to load roster" message={error} onRetry={fetchRoster} />
       ) : (
         <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <CardHeader>

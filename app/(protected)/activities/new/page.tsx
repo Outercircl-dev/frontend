@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, CalendarDays, Check, Save } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
@@ -21,6 +21,9 @@ import {
 } from '@/src/utils/activityCreationValidation'
 import { cn } from '@/lib/utils'
 import type { InterestCategory } from '@/lib/types/profile'
+import { uploadActivityImage, validateActivityImage } from '@/lib/api/activity-image-upload'
+import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
+import { ErrorBlock } from '@/components/ui/error-block'
 
 type Group = {
   id: string
@@ -69,6 +72,9 @@ export default function CreateActivityPage() {
   const [interestsError, setInterestsError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     if (maxParticipantsLimit === null || maxParticipantsLimit === undefined) {
@@ -114,6 +120,16 @@ export default function CreateActivityPage() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreviewUrl(null)
+      return
+    }
+    const objectUrl = URL.createObjectURL(imageFile)
+    setImagePreviewUrl(objectUrl)
+    return () => URL.revokeObjectURL(objectUrl)
+  }, [imageFile])
 
   const hasRequiredLocation = Boolean(address.trim() && latitude.trim() && longitude.trim())
   const hasRequiredTags = selectedInterests.length > 0
@@ -192,23 +208,21 @@ export default function CreateActivityPage() {
               occurrences: occurrences ? Number(occurrences) : undefined,
             }
           : undefined,
+        imageUrl: imageFile ? await uploadActivityImage(imageFile) : undefined,
       }
 
-      const res = await fetch('/rpc/v1/activities', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || 'Failed to create activity')
-      }
-
-      const activity = await res.json()
+      const activity = await fetchJson<{ id: string }>(
+        '/rpc/v1/activities',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        'Failed to create activity',
+      )
       window.location.href = `/activities/${activity.id}`
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create activity')
+      setError(getErrorMessage(err, 'Failed to create activity'))
     } finally {
       setIsSubmitting(false)
     }
@@ -248,6 +262,52 @@ export default function CreateActivityPage() {
           <div className="space-y-2">
             <Label>Description</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
+          </div>
+          <div className="space-y-2">
+            <Label>Activity image</Label>
+            <Input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(event) => {
+                const selected = event.target.files?.[0] ?? null
+                if (!selected) {
+                  setImageFile(null)
+                  return
+                }
+                const validationError = validateActivityImage(selected)
+                if (validationError) {
+                  setError(validationError)
+                  event.target.value = ''
+                  return
+                }
+                setError(null)
+                setImageFile(selected)
+              }}
+            />
+            <p className="text-xs text-muted-foreground">Optional. JPG, PNG, WEBP up to 5MB.</p>
+            {imagePreviewUrl ? (
+              <div className="space-y-2">
+                <img
+                  src={imagePreviewUrl}
+                  alt="Selected activity image preview"
+                  className="h-44 w-full rounded-lg border object-cover"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setImageFile(null)
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = ''
+                    }
+                  }}
+                >
+                  Remove image
+                </Button>
+              </div>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label className="flex items-center gap-1">
@@ -468,7 +528,7 @@ export default function CreateActivityPage() {
             )}
           </div>
           {error && !locationValidationError && !scheduleValidationError ? (
-            <p className="text-sm text-red-600">{error}</p>
+            <ErrorBlock title="Couldn't create activity" message={error} />
           ) : null}
         </CardContent>
       </Card>
