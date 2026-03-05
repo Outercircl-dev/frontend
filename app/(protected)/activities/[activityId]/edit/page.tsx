@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { UpgradeHint } from '@/components/membership/UpgradeHint'
+import { PlaceAutocompleteInput, type SelectedPlace } from '@/components/activities/place-autocomplete-input'
 import { useAuthState } from '@/hooks/useAuthState'
 import type { Activity } from '@/lib/types/activity'
 import { hasActivityStarted } from '@/src/utils/activityDateTime'
@@ -52,9 +53,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('')
   const [interests, setInterests] = useState('')
-  const [address, setAddress] = useState('')
-  const [latitude, setLatitude] = useState('')
-  const [longitude, setLongitude] = useState('')
+  const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null)
   const [activityDate, setActivityDate] = useState('')
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
@@ -114,9 +113,15 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
         setDescription(data.description ?? '')
         setCategory(data.category ?? '')
         setInterests((data.interests ?? []).join(', '))
-        setAddress(data.location?.address ?? '')
-        setLatitude(String(data.location?.latitude ?? ''))
-        setLongitude(String(data.location?.longitude ?? ''))
+        const latitude = data.location?.latitude
+        const longitude = data.location?.longitude
+        const placeId = data.location?.placeId
+        const address = data.location?.address ?? ''
+        setSelectedPlace(
+          typeof latitude === 'number' && typeof longitude === 'number' && placeId && address
+            ? { address, latitude, longitude, placeId }
+            : null,
+        )
         setActivityDate(data.activityDate)
         setStartTime(data.startTime)
         setEndTime(data.endTime ?? '')
@@ -187,12 +192,18 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
     [interests],
   )
 
-  const hasRequiredLocation = Boolean(address.trim() && latitude.trim() && longitude.trim())
+  const hasRequiredLocation = Boolean(
+    selectedPlace?.address &&
+      Number.isFinite(selectedPlace.latitude) &&
+      Number.isFinite(selectedPlace.longitude) &&
+      selectedPlace.placeId,
+  )
   const hasRequiredTags = parsedInterests.length > 0
   const semanticValidationError =
-    activityDate && startTime && endTime && address.trim()
+    activityDate && startTime && endTime
       ? validateActivityCreationInput({
-          address,
+          address: selectedPlace?.address ?? '',
+          placeId: selectedPlace?.placeId ?? '',
           activityDate,
           startTime,
           endTime,
@@ -236,9 +247,10 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
         category,
         interests: parsedInterests,
         location: {
-          address,
-          latitude: latitude ? Number(latitude) : null,
-          longitude: longitude ? Number(longitude) : null,
+          address: selectedPlace?.address ?? '',
+          latitude: selectedPlace?.latitude ?? null,
+          longitude: selectedPlace?.longitude ?? null,
+          placeId: selectedPlace?.placeId ?? undefined,
         },
         activityDate,
         startTime,
@@ -367,24 +379,18 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
             Interests are stored as slugs (lowercase with underscores). We convert your input automatically.
           </p>
 
-          <div className="grid gap-3 md:grid-cols-3">
-            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" required />
-            <Input
-              type="number"
-              step="any"
-              value={latitude}
-              onChange={(e) => setLatitude(e.target.value)}
-              placeholder="Latitude"
+          <div className="space-y-3">
+            <PlaceAutocompleteInput
               required
+              initialAddress={selectedPlace?.address ?? ''}
+              onPlaceSelected={setSelectedPlace}
+              onPlaceCleared={() => setSelectedPlace(null)}
             />
-            <Input
-              type="number"
-              step="any"
-              value={longitude}
-              onChange={(e) => setLongitude(e.target.value)}
-              placeholder="Longitude"
-              required
-            />
+            <div className="grid gap-3 md:grid-cols-3">
+              <Input value={selectedPlace?.latitude ?? ''} readOnly placeholder="Latitude" />
+              <Input value={selectedPlace?.longitude ?? ''} readOnly placeholder="Longitude" />
+              <Input value={selectedPlace?.placeId ?? ''} readOnly placeholder="Place ID" />
+            </div>
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">

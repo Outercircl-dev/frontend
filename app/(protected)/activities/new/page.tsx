@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { UpgradeHint } from '@/components/membership/UpgradeHint'
+import { PlaceAutocompleteInput, type SelectedPlace } from '@/components/activities/place-autocomplete-input'
 import { getInterestsAction } from '@/actions/profile'
 import { useAuthState } from '@/hooks/useAuthState'
 import {
@@ -50,9 +51,7 @@ export default function CreateActivityPage() {
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('')
   const [selectedInterests, setSelectedInterests] = useState<string[]>([])
-  const [address, setAddress] = useState('')
-  const [latitude, setLatitude] = useState('')
-  const [longitude, setLongitude] = useState('')
+  const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null)
   const [activityDate, setActivityDate] = useState('')
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
@@ -131,14 +130,20 @@ export default function CreateActivityPage() {
     return () => URL.revokeObjectURL(objectUrl)
   }, [imageFile])
 
-  const hasRequiredLocation = Boolean(address.trim() && latitude.trim() && longitude.trim())
+  const hasRequiredLocation = Boolean(
+    selectedPlace?.address &&
+      Number.isFinite(selectedPlace.latitude) &&
+      Number.isFinite(selectedPlace.longitude) &&
+      selectedPlace.placeId,
+  )
   const hasRequiredTags = selectedInterests.length > 0
   const timezone = resolveClientTimezone()
   const minActivityDate = getCurrentDateInTimezone(timezone)
   const semanticValidationError =
-    activityDate && startTime && endTime && address.trim()
+    activityDate && startTime && endTime
       ? validateActivityCreationInput({
-          address,
+          address: selectedPlace?.address ?? '',
+          placeId: selectedPlace?.placeId ?? '',
           activityDate,
           startTime,
           endTime,
@@ -189,9 +194,10 @@ export default function CreateActivityPage() {
         category,
         interests: selectedInterests,
         location: {
-          address,
-          latitude: latitude ? Number(latitude) : null,
-          longitude: longitude ? Number(longitude) : null,
+          address: selectedPlace?.address ?? '',
+          latitude: selectedPlace?.latitude ?? null,
+          longitude: selectedPlace?.longitude ?? null,
+          placeId: selectedPlace?.placeId ?? undefined,
         },
         activityDate,
         startTime,
@@ -374,25 +380,14 @@ export default function CreateActivityPage() {
             )}
           </div>
 
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                Address <span className="text-red-500">*</span>
-              </Label>
-              <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" required />
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                Latitude <span className="text-red-500">*</span>
-              </Label>
-              <Input value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="Latitude" required />
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                Longitude <span className="text-red-500">*</span>
-              </Label>
-              <Input value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="Longitude" required />
-            </div>
+          <div className="space-y-3">
+            <PlaceAutocompleteInput
+              required
+              value={selectedPlace}
+              enableMapSelection
+              onPlaceSelected={setSelectedPlace}
+              onPlaceCleared={() => setSelectedPlace(null)}
+            />
           </div>
           {locationValidationError ? <p className="text-sm text-red-600">{locationValidationError}</p> : null}
 

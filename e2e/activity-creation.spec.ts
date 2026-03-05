@@ -2,6 +2,108 @@ import { expect, test } from '@playwright/test'
 
 async function mockAuthenticatedUser(page: import('@playwright/test').Page) {
   await page.addInitScript(() => {
+    class MockAutocomplete {
+      private input: HTMLInputElement
+      private listener: (() => void) | null = null
+
+      constructor(input: HTMLInputElement) {
+        this.input = input
+      }
+
+      addListener(eventName: string, callback: () => void) {
+        if (eventName === 'place_changed') {
+          this.listener = callback
+        }
+        return {
+          remove: () => {
+            this.listener = null
+          },
+        }
+      }
+
+      getPlace() {
+        const query = this.input.value
+        return {
+          formatted_address: query,
+          place_id: 'mock_place_123',
+          geometry: {
+            location: {
+              lat: () => 37.7749,
+              lng: () => -122.4194,
+            },
+          },
+        }
+      }
+
+      triggerSelection() {
+        this.listener?.()
+      }
+    }
+
+    class MockMap {
+      addListener() {
+        return { remove: () => undefined }
+      }
+
+      setCenter() {}
+
+      setZoom() {}
+    }
+
+    class MockMarker {
+      setPosition() {}
+    }
+
+    class MockGeocoder {
+      geocode(
+        request: { location?: { lat: number; lng: number } },
+        callback: (results: Array<{ formatted_address: string; place_id: string }>, status: string) => void,
+      ) {
+        const lat = request.location?.lat ?? 37.7749
+        const lng = request.location?.lng ?? -122.4194
+        callback(
+          [
+            {
+              formatted_address: `Selected map point ${lat}, ${lng}`,
+              place_id: 'mock_place_from_map',
+            },
+          ],
+          'OK',
+        )
+      }
+    }
+
+    const googleMock = {
+      maps: {
+        Map: MockMap,
+        Marker: MockMarker,
+        Geocoder: MockGeocoder,
+        places: {
+          Autocomplete: class {
+            private instance: MockAutocomplete
+
+            constructor(input: HTMLInputElement) {
+              this.instance = new MockAutocomplete(input)
+              input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                  this.instance.triggerSelection()
+                }
+              })
+            }
+
+            addListener(eventName: string, callback: () => void) {
+              return this.instance.addListener(eventName, callback)
+            }
+
+            getPlace() {
+              return this.instance.getPlace()
+            }
+          },
+        },
+      },
+    }
+    ;(window as unknown as { google: unknown }).google = googleMock
+
     const originalFetch = window.fetch.bind(window)
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
@@ -65,13 +167,20 @@ async function mockAuthenticatedUser(page: import('@playwright/test').Page) {
   })
 }
 
-async function fillRequiredActivityFields(page: import('@playwright/test').Page, address: string) {
+async function fillRequiredActivityFields(
+  page: import('@playwright/test').Page,
+  address: string,
+  options?: { selectLocation?: boolean },
+) {
+  const selectLocation = options?.selectLocation ?? true
   await page.getByPlaceholder('Title').fill('Morning Run')
   await page.getByPlaceholder('Category').fill('Sports')
   await page.getByRole('button', { name: /Running/i }).click()
-  await page.getByPlaceholder('Address').fill(address)
-  await page.getByPlaceholder('Latitude').fill('37.7749')
-  await page.getByPlaceholder('Longitude').fill('-122.4194')
+  const locationInput = page.getByPlaceholder('Search address or place')
+  await locationInput.fill(address)
+  if (selectLocation) {
+    await locationInput.press('Enter')
+  }
   await page.locator('input[type="date"]').first().fill('2099-12-31')
   const timeInputs = page.locator('input[type="time"]')
   await timeInputs.nth(0).fill('10:00')
@@ -91,9 +200,9 @@ test('prevents submit for invalid location and shows validation error', async ({
 
   await page.goto('/e2e/activity-create')
   await expect(page.getByText('Create a new activity')).toBeVisible()
-  await fillRequiredActivityFields(page, '123456')
+  await fillRequiredActivityFields(page, '123456', { selectLocation: false })
 
-  await expect(page.getByText('Enter a valid location address using standard address characters.')).toBeVisible()
+  await expect(page.getByText('Select a location from Google suggestions.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Create activity' })).toBeDisabled()
   expect(createEndpointCalled).toBe(false)
 })
@@ -109,8 +218,9 @@ test('submits valid future payload and redirects to activity details', async ({ 
     }
 
     createEndpointCalled = true
-    const payload = route.request().postDataJSON() as { timezone?: string }
+    const payload = route.request().postDataJSON() as { timezone?: string; location?: { placeId?: string } }
     expect(payload.timezone).toBeTruthy()
+    expect(payload.location?.placeId).toBe('mock_place_123')
 
     await route.fulfill({
       status: 201,
