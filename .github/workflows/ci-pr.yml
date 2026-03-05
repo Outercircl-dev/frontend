@@ -26,6 +26,7 @@ jobs:
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: dummy-key
+      NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: dummy-google-maps-key
 
     steps:
       - name: Checkout
