@@ -2,6 +2,7 @@ export interface ActivityLocation {
   address: string
   latitude: number
   longitude: number
+  placeId?: string
 }
 
 export type ParticipationState = 'not_joined' | 'pending' | 'confirmed' | 'waitlisted'

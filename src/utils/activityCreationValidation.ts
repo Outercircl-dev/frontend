@@ -1,4 +1,4 @@
-const ADDRESS_PATTERN = /^(?=.*[A-Za-z])[A-Za-z0-9\s,.'#/-]+$/;
+const ADDRESS_PATTERN = /^(?=.*[\p{L}])[\p{L}\p{M}0-9\s,.'#/()&-]+$/u;
 
 function isValidIanaTimezone(timezone: string): boolean {
   try {
@@ -44,11 +44,17 @@ export function resolveClientTimezone(): string {
 
 export function validateActivityCreationInput(input: {
   address: string;
+  placeId?: string;
   activityDate: string;
   startTime: string;
   endTime: string;
   timezone: string;
 }): string | null {
+  const trimmedPlaceId = input.placeId?.trim();
+  if (!trimmedPlaceId) {
+    return 'Select a location from Google suggestions.';
+  }
+
   const trimmedAddress = input.address.trim();
   if (trimmedAddress.length < 5 || trimmedAddress.length > 160 || !ADDRESS_PATTERN.test(trimmedAddress)) {
     return 'Enter a valid location address using standard address characters.';

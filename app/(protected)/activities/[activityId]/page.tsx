@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { AdSlot } from '@/components/membership/AdSlot'
 import { UpgradeHint } from '@/components/membership/UpgradeHint'
+import { ActivityLocationMap } from '@/components/activities/activity-location-map'
 import { useAuthState } from '@/hooks/useAuthState'
 import { useActivityFeedback } from '@/hooks/useActivityFeedback'
 import { useActivityMessages } from '@/hooks/useActivityMessages'
@@ -47,6 +48,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
         postMessage,
         pinMessage,
         reportMessage,
+        refetch: refetchMessages,
     } = useActivityMessages(activityId)
     const {
         form: feedbackForm,
@@ -74,7 +76,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     const activityStarted = activity ? hasActivityStarted(activity.activityDate, activity.startTime) : false
 
     const locationLabel = activity?.meetingPointHidden
-        ? 'Join to reveal exact meeting point'
+        ? 'Approximate area shown. Join to reveal exact meeting point.'
         : activity?.location?.address ?? 'Unknown location'
     const activityImageUrl = activity?.imageUrl || '/default-activity.svg'
 
@@ -126,11 +128,19 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
         setFeedbackSubmitError(null)
     }, [feedbackForm])
 
+    useEffect(() => {
+        if (!activityId) return
+        if (isHost || viewerStatus === 'confirmed') {
+            void refetchMessages()
+        }
+    }, [activityId, isHost, refetchMessages, viewerStatus])
+
     const handleJoin = async () => {
         try {
             setIsSubmitting(true)
             setActionError(null)
             await join(activity?.isPublic ? {} : { message: joinMessage || undefined })
+            await refetchMessages()
             setJoinMessage('')
         } catch (err) {
             setActionError(err instanceof Error ? err.message : 'Failed to join activity')
@@ -318,112 +328,125 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-6">
+                                <div className="overflow-hidden rounded-xl border bg-muted/40">
+                                    <img
+                                        src={activityImageUrl}
+                                        alt={`${activity.title} hero image`}
+                                        className="h-64 w-full object-cover md:h-80 lg:h-96"
+                                    />
+                                </div>
                                 <div className="grid items-stretch gap-6 lg:grid-cols-[1.4fr_1fr]">
                                     <div className="space-y-6">
-                                    <div className="overflow-hidden rounded-xl border bg-muted/40">
-                                        <img
-                                            src={activityImageUrl}
-                                            alt={`${activity.title} cover image`}
-                                            className="h-64 w-full object-cover md:h-80"
-                                        />
-                                    </div>
-                                <div className="grid gap-4 text-sm text-muted-foreground sm:grid-cols-2">
-                                    <div className="flex items-center gap-2">
-                                        <CalendarDays className="h-4 w-4" />
-                                        <span className="text-foreground">{activity.activityDate}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Clock className="h-4 w-4" />
-                                        <span className="text-foreground">
-                                            {activity.startTime} – {activity.endTime}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <MapPin className="h-4 w-4" />
-                                        <span className="text-foreground">{locationLabel}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Users className="h-4 w-4" />
-                                        <span className="text-foreground">
-                                            {activity.currentParticipants} / {activity.maxParticipants} going (waitlist {activity.waitlistCount})
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
-                                    <div className="flex flex-col gap-2">
-                                        <div className="text-sm font-medium text-foreground">
-                                            Participation status
-                                        </div>
-                                        <p className="text-sm text-muted-foreground">{participationDescription}</p>
-                                        {actionError ? (
-                                            <ErrorBlock title="Action failed" message={actionError} />
-                                        ) : null}
-                                    </div>
-
-                                    {!isHost ? (
-                                        <div className="space-y-3">
-                                            {!activity.isPublic ? (
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-medium text-foreground" htmlFor="join-message">
-                                                        Message to host
-                                                    </label>
-                                                    <Textarea
-                                                        id="join-message"
-                                                        placeholder="Share a short note with the host"
-                                                        value={joinMessage}
-                                                        onChange={(event) => setJoinMessage(event.target.value)}
-                                                    />
+                                        <Card>
+                                            <CardHeader className="pb-3">
+                                                <CardTitle className="text-lg">Location</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="space-y-3">
+                                                <ActivityLocationMap
+                                                    latitude={activity.location?.latitude}
+                                                    longitude={activity.location?.longitude}
+                                                    isApproximate={Boolean(activity.meetingPointHidden)}
+                                                />
+                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                    <MapPin className="h-4 w-4" />
+                                                    <span className="text-foreground">{locationLabel}</span>
                                                 </div>
-                                            ) : null}
-                                            <div className="flex flex-wrap gap-2">
-                                                <Button onClick={handleJoin} disabled={!canJoin || isSubmitting}>
-                                                    {viewerStatus === 'not_joined'
-                                                        ? activity.isPublic
-                                                            ? 'Join activity'
-                                                            : 'Request to join'
-                                                        : 'Join request sent'}
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    onClick={handleCancel}
-                                                    disabled={!canCancel || isSubmitting}
-                                                >
-                                                    Cancel participation
-                                                </Button>
+                                            </CardContent>
+                                        </Card>
+
+                                        <div className="grid gap-4 text-sm text-muted-foreground sm:grid-cols-2">
+                                            <div className="flex items-center gap-2">
+                                                <CalendarDays className="h-4 w-4" />
+                                                <span className="text-foreground">{activity.activityDate}</span>
                                             </div>
-                                            {activityStarted && viewerStatus === 'not_joined' ? (
-                                                <p className="text-sm text-muted-foreground">
-                                                    This activity has already started and can no longer be joined.
-                                                </p>
-                                            ) : null}
-                                        </div>
-                                    ) : (
-                                        <div className="rounded-md border border-dashed border-muted-foreground/40 p-3 text-sm text-muted-foreground space-y-2">
-                                            <p>
-                                                You are the host. Manage participants on the{' '}
-                                                <Link href={`/host/activities/${activity.id}/participants`} className="text-primary underline">
-                                                    roster page
-                                                </Link>
-                                                .
-                                            </p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {activityStarted ? (
-                                                    <Button size="sm" variant="outline" disabled>
-                                                        Edit unavailable after start
-                                                    </Button>
-                                                ) : (
-                                                    <Button asChild size="sm" variant="outline">
-                                                        <Link href={`/activities/${activity.id}/edit`}>Edit activity</Link>
-                                                    </Button>
-                                                )}
-                                                <Button asChild size="sm" variant="outline">
-                                                    <Link href="/activities/groups">Manage groups</Link>
-                                                </Button>
+                                            <div className="flex items-center gap-2">
+                                                <Clock className="h-4 w-4" />
+                                                <span className="text-foreground">
+                                                    {activity.startTime} – {activity.endTime}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2 sm:col-span-2">
+                                                <Users className="h-4 w-4" />
+                                                <span className="text-foreground">
+                                                    {activity.currentParticipants} / {activity.maxParticipants} going (waitlist {activity.waitlistCount})
+                                                </span>
                                             </div>
                                         </div>
-                                    )}
-                                </div>
+
+                                        <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+                                            <div className="flex flex-col gap-2">
+                                                <div className="text-sm font-medium text-foreground">
+                                                    Participation status
+                                                </div>
+                                                <p className="text-sm text-muted-foreground">{participationDescription}</p>
+                                                {actionError ? (
+                                                    <ErrorBlock title="Action failed" message={actionError} />
+                                                ) : null}
+                                            </div>
+
+                                            {!isHost ? (
+                                                <div className="space-y-3">
+                                                    {!activity.isPublic ? (
+                                                        <div className="space-y-2">
+                                                            <label className="text-sm font-medium text-foreground" htmlFor="join-message">
+                                                                Message to host
+                                                            </label>
+                                                            <Textarea
+                                                                id="join-message"
+                                                                placeholder="Share a short note with the host"
+                                                                value={joinMessage}
+                                                                onChange={(event) => setJoinMessage(event.target.value)}
+                                                            />
+                                                        </div>
+                                                    ) : null}
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <Button onClick={handleJoin} disabled={!canJoin || isSubmitting}>
+                                                            {viewerStatus === 'not_joined'
+                                                                ? activity.isPublic
+                                                                    ? 'Join activity'
+                                                                    : 'Request to join'
+                                                                : 'Join request sent'}
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            onClick={handleCancel}
+                                                            disabled={!canCancel || isSubmitting}
+                                                        >
+                                                            Cancel participation
+                                                        </Button>
+                                                    </div>
+                                                    {activityStarted && viewerStatus === 'not_joined' ? (
+                                                        <p className="text-sm text-muted-foreground">
+                                                            This activity has already started and can no longer be joined.
+                                                        </p>
+                                                    ) : null}
+                                                </div>
+                                            ) : (
+                                                <div className="rounded-md border border-dashed border-muted-foreground/40 p-3 text-sm text-muted-foreground space-y-2">
+                                                    <p>
+                                                        You are the host. Manage participants on the{' '}
+                                                        <Link href={`/host/activities/${activity.id}/participants`} className="text-primary underline">
+                                                            roster page
+                                                        </Link>
+                                                        .
+                                                    </p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {activityStarted ? (
+                                                            <Button size="sm" variant="outline" disabled>
+                                                                Edit unavailable after start
+                                                            </Button>
+                                                        ) : (
+                                                            <Button asChild size="sm" variant="outline">
+                                                                <Link href={`/activities/${activity.id}/edit`}>Edit activity</Link>
+                                                            </Button>
+                                                        )}
+                                                        <Button asChild size="sm" variant="outline">
+                                                            <Link href="/activities/groups">Manage groups</Link>
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="h-full">
                                 <Card className="relative flex h-full flex-col overflow-hidden border-dashed">
