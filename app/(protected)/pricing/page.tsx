@@ -1,10 +1,9 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import Link from 'next/link'
-import Image from 'next/image'
-import { LogOut, CheckCircle2, Sparkles } from 'lucide-react'
+import { CheckCircle2, Sparkles } from 'lucide-react'
 
+import { ProtectedHeader } from '@/components/layout/ProtectedHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuthState } from '@/hooks/useAuthState'
@@ -49,27 +48,7 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-muted/40">
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <Link href="/feed" className="flex items-center gap-3">
-            <Image src="/logo.png" alt="OuterCircl" width={140} height={40} className="h-9 w-auto" priority />
-          </Link>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline" className="hidden sm:inline-flex">
-              <Link href="/feed">Discover</Link>
-            </Button>
-            <Button asChild variant="outline" className="hidden sm:inline-flex">
-              <Link href="/profile">Profile</Link>
-            </Button>
-            <form action="/rpc/v1/auth/signout" method="POST">
-              <Button variant="ghost" size="icon" type="submit">
-                <LogOut className="h-5 w-5" />
-                <span className="sr-only">Sign out</span>
-              </Button>
-            </form>
-          </div>
-        </div>
-      </header>
+      <ProtectedHeader />
 
       <main className="mx-auto max-w-6xl space-y-8 px-4 py-12 sm:px-6 lg:px-8">
         <section className="space-y-2">
