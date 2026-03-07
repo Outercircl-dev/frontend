@@ -25,7 +25,7 @@ type PreferenceField =
 const preferenceFields: Array<{ key: PreferenceField; label: string }> = [
   { key: 'recommendedActivities', label: 'Recommended activity matches' },
   { key: 'upcomingActivityReminders', label: 'Upcoming activity reminders' },
-  { key: 'hostJoinCancelUpdates', label: 'Host join/cancel updates' },
+  { key: 'hostJoinCancelUpdates', label: 'Participation and activity updates' },
   { key: 'timeLocationChangeAlerts', label: 'Time/location change alerts' },
   { key: 'safetyAlerts', label: 'Safety alerts' },
   { key: 'channelInApp', label: 'In-app notifications' },
@@ -47,10 +47,7 @@ export function NotificationsDrawer() {
   }, [pathname])
 
   useEffect(() => {
-    if (!shouldRender) {
-      setIsOpen(false)
-      return
-    }
+    if (!shouldRender) return
 
     const handler = () => {
       setIsOpen(true)

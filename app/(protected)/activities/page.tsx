@@ -1,9 +1,8 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarDays, ChevronLeft, ChevronRight, LogOut, MapPin, Search } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, MapPin, Search } from 'lucide-react'
 
 import { ActivityCard } from '@/components/activities/activity-card'
 import { Badge } from '@/components/ui/badge'
@@ -14,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { AdSlot } from '@/components/membership/AdSlot'
 import { UpgradeHint } from '@/components/membership/UpgradeHint'
 import { ErrorBlock } from '@/components/ui/error-block'
+import { ProtectedHeader } from '@/components/layout/ProtectedHeader'
 import { useAuthState } from '@/hooks/useAuthState'
 import type { ActivitiesResponse, Activity } from '@/lib/types/activity'
 import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
@@ -155,27 +155,7 @@ export default function ActivitiesPage() {
 
   return (
     <div className="min-h-screen bg-muted/40">
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <Link href="/feed" className="flex items-center gap-3">
-            <Image src="/logo.png" alt="OuterCircl" width={140} height={40} className="h-9 w-auto" priority />
-          </Link>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline" className="hidden sm:inline-flex">
-              <Link href="/feed">Discover</Link>
-            </Button>
-            <Button asChild variant="outline" className="hidden sm:inline-flex">
-              <Link href="/profile">Profile</Link>
-            </Button>
-            <form action="/rpc/v1/auth/signout" method="POST">
-              <Button variant="ghost" size="icon" type="submit">
-                <LogOut className="h-5 w-5" />
-                <span className="sr-only">Sign out</span>
-              </Button>
-            </form>
-          </div>
-        </div>
-      </header>
+      <ProtectedHeader />
 
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-10 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
