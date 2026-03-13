@@ -1,9 +1,8 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import { use, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CalendarDays, Clock, Lock, LogOut, MapPin, Pin, Users } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Clock, Lock, MapPin, Pin, Users } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -17,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { AdSlot } from '@/components/membership/AdSlot'
 import { UpgradeHint } from '@/components/membership/UpgradeHint'
 import { ActivityLocationMap } from '@/components/activities/activity-location-map'
+import { ProtectedHeader } from '@/components/layout/ProtectedHeader'
 import { useAuthState } from '@/hooks/useAuthState'
 import { useActivityFeedback } from '@/hooks/useActivityFeedback'
 import { useActivityMessages } from '@/hooks/useActivityMessages'
@@ -244,27 +244,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
 
     return (
         <div className="min-h-screen bg-muted/40">
-            <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-                <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-                    <Link href="/feed" className="flex items-center gap-3">
-                        <Image src="/logo.png" alt="OuterCircl" width={140} height={40} className="h-9 w-auto" priority />
-                    </Link>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Button asChild variant="outline" className="hidden sm:inline-flex">
-                            <Link href="/profile">Profile</Link>
-                        </Button>
-                        <Button asChild variant="outline" className="hidden sm:inline-flex">
-                            <Link href="/activities">Activities</Link>
-                        </Button>
-                        <form action="/rpc/v1/auth/signout" method="POST">
-                            <Button variant="ghost" size="icon" type="submit">
-                                <LogOut className="h-5 w-5" />
-                                <span className="sr-only">Sign out</span>
-                            </Button>
-                        </form>
-                    </div>
-                </div>
-            </header>
+            <ProtectedHeader />
 
             <main className="mx-auto max-w-7xl space-y-6 px-4 py-10 sm:px-6 lg:px-8">
                 {showAds ? <AdSlot /> : null}

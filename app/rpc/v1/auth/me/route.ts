@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getRedirectUrlForState, getUserAuthState } from '@/lib/auth-state-machine';
 import { BackendMeResponse, MembershipTierRules, TierKey } from '@/lib/types/auth';
@@ -18,6 +18,8 @@ interface AuthMeResponse {
     role: string;
     type: TierKey;
     tierRules: MembershipTierRules;
+    displayName?: string | null;
+    avatarUrl?: string | null;
   };
   profile: {
     emailVerified: boolean;
@@ -39,7 +41,7 @@ interface AuthMeResponse {
  * Note: emailVerified comes from Supabase user metadata,
  * hasOnboarded (profileCompleted) comes from backend.
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // 1. Get Supabase client (uses request cookies)
     const supabase = await createClient();
@@ -56,6 +58,18 @@ export async function GET(request: NextRequest) {
 
     const accessToken = session.access_token;
     const user = session.user;
+    const userMetadata = user.user_metadata ?? {};
+    const displayName =
+      userMetadata.full_name ??
+      userMetadata.name ??
+      userMetadata.user_name ??
+      userMetadata.username ??
+      null;
+    const avatarUrl =
+      userMetadata.avatar_url ??
+      userMetadata.picture ??
+      userMetadata.photo_url ??
+      null;
 
     // 3. Get email_verified from Supabase user
     // Supabase stores this in user metadata when email is confirmed
@@ -121,6 +135,8 @@ export async function GET(request: NextRequest) {
         role: backendData.role,
         type: backendData.type,
         tierRules: backendData.tierRules,
+        displayName,
+        avatarUrl,
       },
       profile: {
         emailVerified,
