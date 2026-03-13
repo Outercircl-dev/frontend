@@ -6,6 +6,7 @@ import { CheckCircle2, Sparkles } from 'lucide-react'
 import { ProtectedHeader } from '@/components/layout/ProtectedHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ErrorBlock } from '@/components/ui/error-block'
 import { useAuthState } from '@/hooks/useAuthState'
 
 export default function PricingPage() {
@@ -60,9 +61,13 @@ export default function PricingPage() {
         </section>
 
         {error ? (
-          <Card className="border-red-200/70 bg-red-50">
-            <CardContent className="py-4 text-sm text-red-700">{error}</CardContent>
-          </Card>
+          <ErrorBlock
+            title="Unable to start checkout"
+            message={error}
+            onRetry={() => {
+              void handleUpgrade()
+            }}
+          />
         ) : null}
 
         <div className="grid gap-6 lg:grid-cols-2">

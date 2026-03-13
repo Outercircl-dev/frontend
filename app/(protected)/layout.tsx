@@ -6,7 +6,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuthState } from '@/hooks/useAuthState';
 import { UserAuthState } from '@/lib/auth-state-machine';
 import { Skeleton } from '@/components/ui/skeleton';
-import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 interface ProtectedLayoutProps {
   children: ReactNode;
@@ -67,9 +66,6 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
 
   return (
     <>
-      <div className="fixed right-4 top-4 z-70">
-        <NotificationBell />
-      </div>
       {children}
     </>
   );

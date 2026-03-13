@@ -1,14 +1,15 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import { use, useCallback, useEffect, useState } from 'react'
-import { Loader2, LogOut } from 'lucide-react'
+import { Users } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ErrorBlock } from '@/components/ui/error-block'
+import { Skeleton } from '@/components/ui/skeleton'
+import { ProtectedHeader } from '@/components/layout/ProtectedHeader'
 import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
 
 interface ParticipantSummary {
@@ -75,27 +76,7 @@ export default function HostParticipantsPage({ params }: { params: Promise<{ act
 
   return (
     <div className="min-h-screen bg-muted/40">
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <Link href="/feed" className="flex items-center gap-3">
-            <Image src="/logo.png" alt="OuterCircl" width={140} height={40} className="h-9 w-auto" priority />
-          </Link>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Button asChild variant="outline" className="hidden sm:inline-flex">
-              <Link href="/activities">Activities</Link>
-            </Button>
-            <Button asChild variant="outline" className="hidden sm:inline-flex">
-              <Link href={`/activities/${activityId}`}>Activity details</Link>
-            </Button>
-            <form action="/rpc/v1/auth/signout" method="POST">
-              <Button variant="ghost" size="icon" type="submit">
-                <LogOut className="h-5 w-5" />
-                <span className="sr-only">Sign out</span>
-              </Button>
-            </form>
-          </div>
-        </div>
-      </header>
+      <ProtectedHeader />
 
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-10 sm:px-6 lg:px-0">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -108,96 +89,99 @@ export default function HostParticipantsPage({ params }: { params: Promise<{ act
           </Button>
         </div>
 
-        {error ? (
-        <ErrorBlock title="Unable to load roster" message={error} onRetry={fetchRoster} />
-      ) : (
-        <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <CardHeader>
-            <CardTitle>Participants</CardTitle>
-            {actionError ? <p className="text-sm text-red-600">{actionError}</p> : null}
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading roster…
-              </div>
-            ) : participants.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No participants yet.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="text-xs uppercase text-muted-foreground">
-                    <tr>
-                      <th className="pb-2">Name</th>
-                      <th className="pb-2">Status</th>
-                      <th className="pb-2">Waitlist</th>
-                      <th className="pb-2 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-muted/60">
-                    {participants.map((participant) => (
-                      <tr key={participant.id} className="align-middle">
-                        <td className="py-3">
-                          <div className="font-medium text-foreground">
-                            {participant.fullName ?? 'Unnamed participant'}
-                          </div>
-                          {participant.approvalMessage ? (
-                            <p className="text-xs text-muted-foreground">{participant.approvalMessage}</p>
-                          ) : null}
-                        </td>
-                        <td className="py-3">
-                          <Badge
-                            variant={
-                              participant.status === 'confirmed'
-                                ? 'default'
-                                : participant.status === 'pending'
-                                  ? 'secondary'
-                                  : participant.status === 'waitlisted'
-                                    ? 'outline'
-                                    : 'destructive'
-                            }
-                          >
-                            {participant.status}
-                          </Badge>
-                        </td>
-                        <td className="py-3">
-                          {participant.waitlistPosition ? `#${participant.waitlistPosition}` : '—'}
-                        </td>
-                        <td className="py-3 text-right">
-                          <div className="flex justify-end gap-2">
-                            {participant.status === 'pending' || participant.status === 'waitlisted' ? (
-                              <>
-                                <Button
-                                  size="sm"
-                                  onClick={() => moderate(participant.id, 'approve')}
-                                  disabled={pendingId === participant.id}
-                                >
-                                  Approve
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => moderate(participant.id, 'reject')}
-                                  disabled={pendingId === participant.id}
-                                >
-                                  Reject
-                                </Button>
-                              </>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">No action</span>
-                            )}
-                          </div>
-                        </td>
+        {error ? <ErrorBlock title="Unable to load roster" message={error} onRetry={fetchRoster} /> : null}
+
+        {!error ? (
+          <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <CardHeader className="space-y-3">
+              <CardTitle>Participants</CardTitle>
+              {actionError ? <ErrorBlock title="Couldn't update participant" message={actionError} /> : null}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-6 w-1/3" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : participants.length === 0 ? (
+                <Card className="border-dashed">
+                  <CardContent className="flex flex-col items-center justify-center gap-2 py-8 text-center text-sm text-muted-foreground">
+                    <Users className="h-5 w-5" />
+                    No participants yet. Share your activity and review requests here when they arrive.
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="text-xs uppercase text-muted-foreground">
+                      <tr>
+                        <th className="pb-2">Name</th>
+                        <th className="pb-2">Status</th>
+                        <th className="pb-2">Waitlist</th>
+                        <th className="pb-2 text-right">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                    </thead>
+                    <tbody className="divide-y divide-muted/60">
+                      {participants.map((participant) => (
+                        <tr key={participant.id} className="align-middle">
+                          <td className="py-3">
+                            <div className="font-medium text-foreground">{participant.fullName ?? 'Unnamed participant'}</div>
+                            {participant.approvalMessage ? (
+                              <p className="text-xs text-muted-foreground">{participant.approvalMessage}</p>
+                            ) : null}
+                          </td>
+                          <td className="py-3">
+                            <Badge
+                              variant={
+                                participant.status === 'confirmed'
+                                  ? 'default'
+                                  : participant.status === 'pending'
+                                    ? 'secondary'
+                                    : participant.status === 'waitlisted'
+                                      ? 'outline'
+                                      : 'destructive'
+                              }
+                            >
+                              {participant.status}
+                            </Badge>
+                          </td>
+                          <td className="py-3">{participant.waitlistPosition ? `#${participant.waitlistPosition}` : '—'}</td>
+                          <td className="py-3 text-right">
+                            <div className="flex justify-end gap-2">
+                              {participant.status === 'pending' || participant.status === 'waitlisted' ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => moderate(participant.id, 'approve')}
+                                    disabled={pendingId === participant.id}
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => moderate(participant.id, 'reject')}
+                                    disabled={pendingId === participant.id}
+                                  >
+                                    Reject
+                                  </Button>
+                                </>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">No action</span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
       </main>
     </div>
   )

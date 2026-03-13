@@ -11,6 +11,8 @@ interface AuthUser {
   role: string;
   type: TierKey;
   tierRules: MembershipTierRules;
+  displayName?: string | null;
+  avatarUrl?: string | null;
 }
 
 interface AuthProfile {

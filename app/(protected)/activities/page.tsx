@@ -32,9 +32,6 @@ export default function ActivitiesPage() {
   const { user } = useAuthState()
   const showAds = Boolean(user?.tierRules?.ads?.showsAds)
   const groupsEnabled = user?.tierRules?.groups?.enabled ?? false
-  const requiresVerifiedHost = Boolean(user?.tierRules?.verification?.requiresVerifiedHostForHosting)
-  const isVerifiedHost = user?.role === 'authenticated'
-  const canHost = !requiresVerifiedHost || isVerifiedHost
 
   const fetchActivities = useCallback(() => {
     let cancelled = false
@@ -164,18 +161,6 @@ export default function ActivitiesPage() {
             <p className="text-sm text-muted-foreground">Everything you host or are attending, plus what’s trending.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex flex-col items-start gap-1">
-              {canHost ? (
-                <Button asChild variant="outline">
-                  <Link href="/activities/new">Create activity</Link>
-                </Button>
-              ) : (
-                <Button variant="outline" disabled className="opacity-60">
-                  Create activity
-                </Button>
-              )}
-              {!canHost ? <UpgradeHint message="Hosting requires a verified plan." className="text-xs" /> : null}
-            </div>
             <div className="flex flex-col items-start gap-1">
               {groupsEnabled ? (
                 <Button asChild variant="outline">

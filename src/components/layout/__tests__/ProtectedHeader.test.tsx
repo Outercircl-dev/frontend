@@ -8,21 +8,29 @@ import { ProtectedHeader } from '@/components/layout/ProtectedHeader'
 
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props: any) => <img alt={props.alt} src={props.src} />,
+  default: (props: { alt?: string }) => <span>{props.alt}</span>,
 }))
 
 jest.mock('next/navigation', () => ({
   usePathname: jest.fn(() => '/settings'),
 }))
 
+jest.mock('@/hooks/useAuthState', () => ({
+  useAuthState: jest.fn(() => ({
+    user: {
+      email: 'test.user@example.com',
+      displayName: 'Test User',
+      avatarUrl: null,
+    },
+  })),
+}))
+
 describe('ProtectedHeader', () => {
-  it('renders navigation and highlights current route', () => {
+  it('renders mobile-first actions and account trigger', () => {
     render(<ProtectedHeader />)
 
-    expect(screen.getByRole('link', { name: 'Discover' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'My activities' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Settings' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('/settings')
-    expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Create activity' }).getAttribute('href')).toBe('/activities/new')
+    expect(screen.getByRole('button', { name: 'Open account menu' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'OuterCircl' }).getAttribute('href')).toBe('/feed')
   })
 })
