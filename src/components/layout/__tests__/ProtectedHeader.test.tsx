@@ -13,6 +13,10 @@ jest.mock('next/image', () => ({
 
 jest.mock('next/navigation', () => ({
   usePathname: jest.fn(() => '/settings'),
+  useRouter: jest.fn(() => ({
+    replace: jest.fn(),
+    refresh: jest.fn(),
+  })),
 }))
 
 jest.mock('@/hooks/useAuthState', () => ({

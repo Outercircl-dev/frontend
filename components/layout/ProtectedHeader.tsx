@@ -2,6 +2,8 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { useCallback, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Bell, CalendarCheck2, LogOut, Plus, Settings, Tag, User2 } from 'lucide-react'
 
 import { openNotificationsDrawer } from '@/components/notifications/drawer-events'
@@ -36,9 +38,39 @@ function getInitials(displayName: string | null | undefined, email: string | nul
 }
 
 export function ProtectedHeader() {
+  const router = useRouter()
+  const [isSigningOut, setIsSigningOut] = useState(false)
   const { user } = useAuthState()
   const displayName = user?.displayName?.trim() || null
   const userLabel = displayName ?? user?.email ?? 'My account'
+
+  const handleSignOut = useCallback(async () => {
+    if (isSigningOut) {
+      return
+    }
+
+    setIsSigningOut(true)
+    try {
+      const response = await fetch('/rpc/v1/auth/signout', { method: 'POST' })
+
+      if (response.redirected) {
+        window.location.assign(response.url)
+        return
+      }
+
+      if (!response.ok) {
+        throw new Error('Sign out failed')
+      }
+
+      router.replace('/login')
+      router.refresh()
+    } catch (error) {
+      console.error('Failed to sign out:', error)
+      window.location.assign('/login')
+    } finally {
+      setIsSigningOut(false)
+    }
+  }, [isSigningOut, router])
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
@@ -109,16 +141,16 @@ export function ProtectedHeader() {
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <button
-                  type="submit"
-                  formAction="/rpc/v1/auth/signout"
-                  formMethod="post"
-                  className="w-full text-destructive"
-                >
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                disabled={isSigningOut}
+                onSelect={(event) => {
+                  event.preventDefault()
+                  void handleSignOut()
+                }}
+              >
                   <LogOut className="h-4 w-4" />
                   Sign out
-                </button>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
