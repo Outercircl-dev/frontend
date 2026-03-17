@@ -119,6 +119,18 @@ export default function FeedPage() {
     return visible
   }, [raw, query, category, sort])
 
+  const handleActivityUpdated = (updatedActivity: Activity) => {
+    setRaw((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        items: prev.items.map((item) =>
+          item.id === updatedActivity.id ? updatedActivity : item,
+        ),
+      }
+    })
+  }
+
   return (
     <div className="min-h-screen bg-muted/40">
       <ProtectedHeader />
@@ -263,6 +275,7 @@ export default function FeedPage() {
                   activity={activity}
                   viewerId={user?.supabaseUserId}
                   clickHref={`/activities/${activity.id}`}
+                  onActivityUpdated={handleActivityUpdated}
                 />
               ))}
             </div>
