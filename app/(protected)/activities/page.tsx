@@ -150,6 +150,21 @@ export default function ActivitiesPage() {
     return Array.from(merged.values())
   }, [pastActivities, myActivities, isOldActivity])
 
+  const handleActivityUpdated = useCallback((updatedActivity: Activity) => {
+    setRaw((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        items: prev.items.map((item) =>
+          item.id === updatedActivity.id ? updatedActivity : item,
+        ),
+      }
+    })
+    setPastActivities((prev) =>
+      prev.map((item) => (item.id === updatedActivity.id ? updatedActivity : item)),
+    )
+  }, [])
+
   return (
     <div className="min-h-screen bg-muted/40">
       <ProtectedHeader />
@@ -234,6 +249,7 @@ export default function ActivitiesPage() {
                       key={`mine-${activity.id}`}
                       activity={activity}
                       viewerId={user?.supabaseUserId}
+                      onActivityUpdated={handleActivityUpdated}
                     />
                   ))}
                 </div>
@@ -262,6 +278,7 @@ export default function ActivitiesPage() {
                       key={`discover-${activity.id}`}
                       activity={activity}
                       viewerId={user?.supabaseUserId}
+                      onActivityUpdated={handleActivityUpdated}
                     />
                   ))}
                 </div>
@@ -289,6 +306,7 @@ export default function ActivitiesPage() {
                       key={`old-${activity.id}`}
                       activity={activity}
                       viewerId={user?.supabaseUserId}
+                      onActivityUpdated={handleActivityUpdated}
                     />
                   ))}
                 </div>

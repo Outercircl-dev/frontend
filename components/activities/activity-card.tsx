@@ -1,12 +1,17 @@
-import Link from 'next/link'
+'use client'
+
+import { useRouter } from 'next/navigation'
+import { useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react'
 
 import { CalendarDays, Clock, Globe, Lock, MapPin, Users } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { Button } from '@/components/ui/button'
+import { fetchJson } from '@/lib/api/fetch-json'
 import type { Activity } from '@/lib/types/activity'
+import { hasActivityStarted } from '@/src/utils/activityDateTime'
 
 function formatDate(dateString: string) {
   const d = new Date(dateString)
@@ -15,10 +20,9 @@ function formatDate(dateString: string) {
 }
 
 function formatTime(dateString: string, timeString: string) {
-  // Treat as local time for display; backend provides date + time separately.
-  const dt = new Date(`${dateString}T${timeString}`)
-  if (Number.isNaN(dt.getTime())) return timeString
-  return dt.toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit' })
+  const [hours, minutes] = (timeString ?? '').split(':')
+  if (!hours || !minutes) return timeString
+  return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`
 }
 
 function titleCase(value: string | null | undefined, fallback = '') {
@@ -35,13 +39,17 @@ export function ActivityCard({
   activity,
   viewerId,
   clickHref,
+  onActivityUpdated,
 }: {
   activity: Activity
   viewerId?: string | null
   clickHref?: string
+  onActivityUpdated?: (activity: Activity) => void
 }) {
+  const router = useRouter()
+  const [isJoining, setIsJoining] = useState(false)
   const total = Math.max(0, activity.maxParticipants ?? 0)
-  const current = Math.max(0, activity.currentParticipants ?? 0)
+  const current = Math.max(1, activity.currentParticipants ?? 0)
   const ratio = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0
   const spotsLeft = total > 0 ? Math.max(0, total - current) : null
   const locationLabel =
@@ -49,16 +57,71 @@ export function ActivityCard({
       ? 'Join to reveal exact meeting point'
       : activity.location?.address ?? 'Unknown location'
   const isHost = Boolean(viewerId && activity.hostId === viewerId)
+  const hasStarted = hasActivityStarted(activity.activityDate, activity.startTime)
+  const participationStatus = activity.viewerParticipation?.status ?? 'not_joined'
   const activityImageUrl = activity.imageUrl || '/default-activity.svg'
   const hostLabel = activity.hostUsername || activity.hostName || activity.hostId.slice(0, 8)
+  const targetHref = clickHref ?? `/activities/${activity.id}`
+  const canJoin =
+    Boolean(viewerId) &&
+    !isHost &&
+    activity.status === 'published' &&
+    !hasStarted &&
+    participationStatus === 'not_joined'
+  const joinButtonLabel = useMemo(() => {
+    if (isHost) return 'Host'
+    if (participationStatus === 'confirmed') return 'Joined'
+    if (participationStatus === 'pending') return 'Request Pending'
+    if (participationStatus === 'waitlisted') return 'Waitlisted'
+    return 'Join Activity'
+  }, [isHost, participationStatus])
 
-  const cardContent = (
+  const handleCardClick = () => {
+    router.push(targetHref)
+  }
+
+  const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      router.push(targetHref)
+    }
+  }
+
+  const handleJoin = async (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    if (!canJoin || isJoining) {
+      return
+    }
+
+    try {
+      setIsJoining(true)
+      const data = await fetchJson<{ activity: Activity }>(
+        `/rpc/v1/activities/${activity.id}/participants`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        },
+        'Failed to join activity',
+      )
+      onActivityUpdated?.(data.activity)
+    } finally {
+      setIsJoining(false)
+    }
+  }
+
+  return (
     <Card
+      role="link"
+      tabIndex={0}
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
       className={`group overflow-hidden border-muted/70 bg-background transition hover:-translate-y-0.5 hover:shadow-md ${
-        clickHref ? 'cursor-pointer' : ''
+        targetHref ? 'cursor-pointer' : ''
       }`}
     >
-      <div className="aspect-[16/9] w-full overflow-hidden border-b bg-muted/40">
+      <div className="aspect-video w-full overflow-hidden border-b bg-muted/40">
         <img
           src={activityImageUrl}
           alt={`${activity.title} cover image`}
@@ -152,27 +215,13 @@ export function ActivityCard({
             Waitlist:{' '}
             <span className="font-medium text-foreground">{activity.waitlistCount ?? 0}</span>
           </span>
-          {clickHref ? (
-            <span className="text-primary">View details</span>
-          ) : (
-            <Button asChild variant="link" className="h-auto px-0 text-primary">
-              <Link href={`/activities/${activity.id}`}>View details</Link>
-            </Button>
-          )}
+          <Button size="sm" onClick={handleJoin} disabled={!canJoin || isJoining}>
+            {isJoining ? 'Joining...' : joinButtonLabel}
+          </Button>
         </div>
       </CardContent>
     </Card>
   )
-
-  if (clickHref) {
-    return (
-      <Link href={clickHref} className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-        {cardContent}
-      </Link>
-    )
-  }
-
-  return cardContent
 }
 
 

@@ -2,28 +2,32 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { use, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, CalendarDays, Save } from 'lucide-react'
+import { use, useEffect, useRef, useState } from 'react'
+import { ArrowLeft, CalendarDays, Check, Save } from 'lucide-react'
 
+import { getInterestsAction } from '@/actions/profile'
+import { PlaceAutocompleteInput, type SelectedPlace } from '@/components/activities/place-autocomplete-input'
+import { UpgradeHint } from '@/components/membership/UpgradeHint'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ErrorBlock } from '@/components/ui/error-block'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { UpgradeHint } from '@/components/membership/UpgradeHint'
-import { PlaceAutocompleteInput, type SelectedPlace } from '@/components/activities/place-autocomplete-input'
 import { useAuthState } from '@/hooks/useAuthState'
+import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
+import { uploadActivityImage, validateActivityImage } from '@/lib/api/activity-image-upload'
 import type { Activity } from '@/lib/types/activity'
+import type { InterestCategory } from '@/lib/types/profile'
+import { cn } from '@/lib/utils'
 import { hasActivityStarted } from '@/src/utils/activityDateTime'
 import {
   getCurrentDateInTimezone,
   resolveClientTimezone,
   validateActivityCreationInput,
 } from '@/src/utils/activityCreationValidation'
-import { uploadActivityImage, validateActivityImage } from '@/lib/api/activity-image-upload'
-import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
-import { ErrorBlock } from '@/components/ui/error-block'
 
 type Group = {
   id: string
@@ -52,7 +56,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('')
-  const [interests, setInterests] = useState('')
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([])
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null)
   const [activityDate, setActivityDate] = useState('')
   const [startTime, setStartTime] = useState('')
@@ -68,6 +72,9 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
   const [occurrences, setOccurrences] = useState('')
 
   const [groups, setGroups] = useState<Group[]>([])
+  const [interestCategories, setInterestCategories] = useState<InterestCategory[]>([])
+  const [interestsLoading, setInterestsLoading] = useState(true)
+  const [interestsError, setInterestsError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -112,7 +119,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
         setTitle(data.title)
         setDescription(data.description ?? '')
         setCategory(data.category ?? '')
-        setInterests((data.interests ?? []).join(', '))
+        setSelectedInterests(data.interests ?? [])
         const latitude = data.location?.latitude
         const longitude = data.location?.longitude
         const placeId = data.location?.placeId
@@ -177,20 +184,22 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
     }
   }, [groupsEnabled])
 
-  const parsedInterests = useMemo(
-    () =>
-      interests
-        .split(',')
-        .map((value) => value.trim())
-        .filter(Boolean)
-        .map((value) =>
-          value
-            .toLowerCase()
-            .replace(/\s+/g, '_')
-            .replace(/[^a-z0-9_]/g, ''),
-        ),
-    [interests],
-  )
+  useEffect(() => {
+    let cancelled = false
+    async function loadInterests() {
+      const result = await getInterestsAction()
+      if (cancelled) return
+      if (result.categories?.length) {
+        setInterestCategories(result.categories)
+      }
+      setInterestsError(result.error)
+      setInterestsLoading(false)
+    }
+    loadInterests()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const hasRequiredLocation = Boolean(
     selectedPlace?.address &&
@@ -198,7 +207,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
       Number.isFinite(selectedPlace.longitude) &&
       selectedPlace.placeId,
   )
-  const hasRequiredTags = parsedInterests.length > 0
+  const hasRequiredTags = selectedInterests.length > 0
   const semanticValidationError =
     activityDate && startTime && endTime
       ? validateActivityCreationInput({
@@ -209,6 +218,10 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
           endTime,
           timezone,
         })
+      : null
+  const locationValidationError =
+    semanticValidationError && semanticValidationError.toLowerCase().includes('location')
+      ? semanticValidationError
       : null
   const scheduleValidationError =
     semanticValidationError &&
@@ -245,7 +258,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
         title,
         description,
         category,
-        interests: parsedInterests,
+        interests: selectedInterests,
         location: {
           address: selectedPlace?.address ?? '',
           latitude: selectedPlace?.latitude ?? null,
@@ -316,10 +329,16 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
           <CardTitle>Edit activity</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {error ? <ErrorBlock title="Couldn't update activity" message={error} /> : null}
-
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" required />
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1">
+              Title <span className="text-red-500">*</span>
+            </Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" required />
+          </div>
+          <div className="space-y-2">
+            <Label>Description</Label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
+          </div>
           <div className="space-y-2">
             <Label>Activity image</Label>
             <Input
@@ -368,30 +387,81 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
               </div>
             ) : null}
           </div>
-          <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Category" required />
-          <Input
-            value={interests}
-            onChange={(e) => setInterests(e.target.value)}
-            placeholder="Interests (comma separated, e.g. sports, football)"
-            required
-          />
-          <p className="text-xs text-muted-foreground">
-            Interests are stored as slugs (lowercase with underscores). We convert your input automatically.
-          </p>
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1">
+              Category <span className="text-red-500">*</span>
+            </Label>
+            <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Category" required />
+          </div>
+          <div className="space-y-3">
+            <Label className="flex items-center gap-1">
+              Interests <span className="text-red-500">*</span>
+            </Label>
+            <div className="flex items-center gap-2">
+              <Badge variant={selectedInterests.length > 0 ? 'default' : 'secondary'}>
+                {selectedInterests.length} selected
+              </Badge>
+              <span className="text-xs text-muted-foreground">Choose at least 1 (up to 10).</span>
+            </div>
+            {interestsError ? <p className="text-xs text-destructive">{interestsError}</p> : null}
+            {interestsLoading ? (
+              <p className="text-sm text-muted-foreground">Loading interests...</p>
+            ) : (
+              <div className="max-h-[320px] space-y-4 overflow-y-auto pr-2">
+                {interestCategories.map((interestCategory) => (
+                  <div key={interestCategory.name} className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {interestCategory.name}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {interestCategory.interests.map((interest) => {
+                        const isSelected = selectedInterests.includes(interest.slug)
+                        const isDisabled = !isSelected && selectedInterests.length >= 10
+                        return (
+                          <button
+                            key={interest.slug}
+                            type="button"
+                            onClick={() => {
+                              setSelectedInterests((prev) =>
+                                prev.includes(interest.slug)
+                                  ? prev.filter((slug) => slug !== interest.slug)
+                                  : prev.length < 10
+                                    ? [...prev, interest.slug]
+                                    : prev,
+                              )
+                            }}
+                            disabled={isDisabled}
+                            className={cn(
+                              'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-medium transition-all',
+                              isSelected
+                                ? 'border-primary bg-primary/10 text-primary'
+                                : 'border-border bg-background text-foreground hover:border-primary/50 hover:bg-primary/5',
+                              isDisabled && 'cursor-not-allowed opacity-50',
+                            )}
+                          >
+                            <span>{interest.icon}</span>
+                            <span>{interest.name}</span>
+                            {isSelected ? <Check className="h-3.5 w-3.5" /> : null}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="space-y-3">
             <PlaceAutocompleteInput
               required
-              initialAddress={selectedPlace?.address ?? ''}
+              value={selectedPlace}
+              enableMapSelection
               onPlaceSelected={setSelectedPlace}
               onPlaceCleared={() => setSelectedPlace(null)}
             />
-            <div className="grid gap-3 md:grid-cols-3">
-              <Input value={selectedPlace?.latitude ?? ''} readOnly placeholder="Latitude" />
-              <Input value={selectedPlace?.longitude ?? ''} readOnly placeholder="Longitude" />
-              <Input value={selectedPlace?.placeId ?? ''} readOnly placeholder="Place ID" />
-            </div>
           </div>
+          {locationValidationError ? <p className="text-sm text-red-600">{locationValidationError}</p> : null}
 
           <div className="grid gap-3 md:grid-cols-3">
             <Input
@@ -510,6 +580,9 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
               </p>
             )}
           </div>
+          {error && !locationValidationError && !scheduleValidationError ? (
+            <ErrorBlock title="Couldn't update activity" message={error} />
+          ) : null}
         </CardContent>
       </Card>
     </div>

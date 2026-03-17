@@ -78,6 +78,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     const locationLabel = activity?.meetingPointHidden
         ? 'Approximate area shown. Join to reveal exact meeting point.'
         : activity?.location?.address ?? 'Unknown location'
+    const goingCount = Math.max(1, activity?.currentParticipants ?? 0)
     const activityImageUrl = activity?.imageUrl || '/default-activity.svg'
 
     const canJoin = !isHost && viewerStatus === 'not_joined' && !activityStarted
@@ -99,7 +100,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                     ? 'Messaging unlocks once you are moved from the waitlist to confirmed.'
                     : 'Group messaging is currently unavailable.'
     const showChatLockOverlay = messageAccessDenied
-    const showFeedbackLockOverlay = true
+    const showFeedbackLockOverlay = Boolean(feedbackForm && !feedbackForm.activityEnded)
     const composerDisabled = !canUseGroupChat || messageAccessDenied
 
     useEffect(() => {
@@ -348,7 +349,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                             <div className="flex items-center gap-2 sm:col-span-2">
                                                 <Users className="h-4 w-4" />
                                                 <span className="text-foreground">
-                                                    {activity.currentParticipants} / {activity.maxParticipants} going (waitlist {activity.waitlistCount})
+                                                    {goingCount} / {activity.maxParticipants} going (waitlist {activity.waitlistCount})
                                                 </span>
                                             </div>
                                         </div>
@@ -737,7 +738,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
 
                                                         <Button
                                                             onClick={handleSubmitFeedback}
-                                                            disabled={isSubmittingFeedback}
+                                                            disabled={isSubmittingFeedback || !consentToAnalysis}
                                                         >
                                                             {isSubmittingFeedback ? 'Submitting...' : 'Submit feedback'}
                                                         </Button>
