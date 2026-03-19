@@ -22,6 +22,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import { uploadProfileAvatar, validateProfileAvatar } from '@/lib/api/profile-avatar-upload'
 import type { OnboardingFormData } from '@/lib/types/profile'
 
 interface BasicInfoStepProps {
@@ -44,9 +45,17 @@ export function BasicInfoStep({ form, onNext }: BasicInfoStepProps) {
   const [hasTypedUsername, setHasTypedUsername] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const avatarUrl = form.watch('profilePictureUrl') || previewUrl || undefined
+  const avatarUrl = previewUrl || form.watch('profilePictureUrl') || undefined
   const fullName = form.watch('fullName')
   const username = form.watch('username')
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
 
   useEffect(() => {
     const normalizedUsername = (username ?? '').trim().toLowerCase()
@@ -122,38 +131,49 @@ export function BasicInfoStep({ form, onNext }: BasicInfoStepProps) {
     }
   }, [form, hasTypedUsername, username])
 
-  // Handle local preview - actual upload happens when profile is saved
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-    if (!allowedTypes.includes(file.type)) {
-      alert('Invalid file type. Please upload a JPEG, PNG, WebP, or GIF image.')
+    const validationError = validateProfileAvatar(file)
+    if (validationError) {
+      alert(validationError)
       return
     }
 
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024
-    if (file.size > maxSize) {
-      alert('File too large. Maximum size is 5MB.')
-      return
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
     }
+    const localUrl = URL.createObjectURL(file)
+    const previousAvatarUrl = form.getValues('profilePictureUrl')
+    setPreviewUrl(localUrl)
 
     setIsUploading(true)
-
-    // Create local preview URL
-    const localUrl = URL.createObjectURL(file)
-    setPreviewUrl(localUrl)
-    
-    // Store file info for later upload (we'll handle actual upload when saving profile)
-    // For now, we just show a preview
-    form.setValue('profilePictureUrl', localUrl)
-
-    setIsUploading(false)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+    try {
+      const uploadedUrl = await uploadProfileAvatar(file)
+      form.setValue('profilePictureUrl', uploadedUrl, {
+        shouldDirty: true,
+        shouldTouch: true,
+      })
+      URL.revokeObjectURL(localUrl)
+      setPreviewUrl(null)
+    } catch (error) {
+      URL.revokeObjectURL(localUrl)
+      setPreviewUrl(null)
+      form.setValue('profilePictureUrl', previousAvatarUrl, {
+        shouldDirty: true,
+        shouldTouch: true,
+      })
+      alert(
+        error instanceof Error
+          ? error.message
+          : 'Failed to upload your photo. Please try again.'
+      )
+    } finally {
+      setIsUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     }
   }
 
@@ -162,7 +182,10 @@ export function BasicInfoStep({ form, onNext }: BasicInfoStepProps) {
       URL.revokeObjectURL(previewUrl)
     }
     setPreviewUrl(null)
-    form.setValue('profilePictureUrl', undefined)
+    form.setValue('profilePictureUrl', undefined, {
+      shouldDirty: true,
+      shouldTouch: true,
+    })
   }
 
   const getInitials = (name: string) => {
@@ -235,7 +258,7 @@ export function BasicInfoStep({ form, onNext }: BasicInfoStepProps) {
             {avatarUrl ? 'Change Photo' : 'Add Photo'}
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">Optional · Max 5MB</p>
+        <p className="text-xs text-muted-foreground">Optional</p>
       </div>
 
       {/* Form Fields */}

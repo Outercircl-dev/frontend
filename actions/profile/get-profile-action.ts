@@ -42,9 +42,8 @@ export async function getProfileAction(): Promise<GetProfileResult> {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      // Use short-lived cache with revalidation for better performance
-      // Profile data doesn't change frequently, so 60s cache is reasonable
-      next: { revalidate: 60 },
+      // Always fetch fresh profile data so avatar/name updates appear immediately.
+      cache: 'no-store',
     })
 
     if (!backendResponse.ok) {

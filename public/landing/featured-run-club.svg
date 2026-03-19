@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-labelledby="title desc">
+  <title id="title">Run Club Placeholder</title>
+  <desc id="desc">Placeholder image for run club activity card.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f1f2d" />
+      <stop offset="100%" stop-color="#3f466b" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="520" fill="url(#bg)" />
+  <path d="M0 360 L800 240 L800 520 L0 520 Z" fill="#2c8c6f" opacity="0.6" />
+  <path d="M0 410 L800 300" stroke="#8ee8c7" stroke-width="18" stroke-linecap="round" />
+  <circle cx="160" cy="170" r="58" fill="#8ee8c7" opacity="0.5" />
+  <text x="40" y="472" fill="#ffffff" font-size="48" font-family="Arial, sans-serif" font-weight="700">After Work Run</text>
+</svg>

@@ -24,6 +24,7 @@ interface AuthMeResponse {
   profile: {
     emailVerified: boolean;
     profileCompleted: boolean;
+    interests: string[];
   };
 }
 
@@ -136,11 +137,12 @@ export async function GET() {
         type: backendData.type,
         tierRules: backendData.tierRules,
         displayName,
-        avatarUrl,
+        avatarUrl: backendData.profilePictureUrl ?? avatarUrl,
       },
       profile: {
         emailVerified,
         profileCompleted,
+        interests: Array.isArray(backendData.interests) ? backendData.interests : [],
       },
     };
 

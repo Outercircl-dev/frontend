@@ -49,6 +49,7 @@ export interface Activity {
   createdAt: string
   updatedAt: string
   meetingPointHidden: boolean
+  interestMatchCount?: number
   viewerParticipation?: ViewerParticipationMeta
 }
 

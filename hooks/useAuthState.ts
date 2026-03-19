@@ -18,6 +18,7 @@ interface AuthUser {
 interface AuthProfile {
   emailVerified: boolean;
   profileCompleted: boolean;
+  interests: string[];
 }
 
 interface AuthData {
