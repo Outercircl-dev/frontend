@@ -8,6 +8,7 @@ import { Bell, CalendarCheck2, LogOut, Plus, Settings, Tag, User2 } from 'lucide
 
 import { openNotificationsDrawer } from '@/components/notifications/drawer-events'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -19,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuthState } from '@/hooks/useAuthState'
+import { useNotifications } from '@/hooks/useNotifications'
 
 function getInitials(displayName: string | null | undefined, email: string | null | undefined): string {
   const fromName = (displayName ?? '')
@@ -41,8 +43,10 @@ export function ProtectedHeader() {
   const router = useRouter()
   const [isSigningOut, setIsSigningOut] = useState(false)
   const { user } = useAuthState()
+  const { unreadCount } = useNotifications()
   const displayName = user?.displayName?.trim() || null
   const userLabel = displayName ?? user?.email ?? 'My account'
+  const unreadLabel = unreadCount > 99 ? '99+' : String(unreadCount)
 
   const handleSignOut = useCallback(async () => {
     if (isSigningOut) {
@@ -89,13 +93,18 @@ export function ProtectedHeader() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-11 w-11 rounded-full p-0" aria-label="Open account menu">
+              <Button variant="ghost" className="relative h-11 w-11 rounded-full p-0" aria-label="Open account menu">
                 <Avatar className="h-8 w-8 ring-1 ring-border">
                   {user?.avatarUrl ? <AvatarImage src={user.avatarUrl} alt={userLabel} /> : null}
                   <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
                     {getInitials(displayName, user?.email)}
                   </AvatarFallback>
                 </Avatar>
+                {unreadCount > 0 ? (
+                  <Badge className="pointer-events-none absolute -right-0.5 -top-0.5 min-w-5 justify-center px-1 text-[10px]">
+                    {unreadLabel}
+                  </Badge>
+                ) : null}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">

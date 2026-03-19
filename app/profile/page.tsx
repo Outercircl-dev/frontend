@@ -188,7 +188,7 @@ export default async function ProfilePage() {
                             <Link href="/feed">Discover</Link>
                         </Button>
                         <Button asChild>
-                            <Link href="/onboarding/profile">Edit profile</Link>
+                            <Link href="/profile/edit">Edit profile</Link>
                         </Button>
                     </div>
                 </div>
@@ -245,7 +245,7 @@ export default async function ProfilePage() {
                                     </p>
                                     <div className="flex gap-2">
                                         <Button asChild size="sm" className="w-full">
-                                            <Link href="/onboarding/profile">Update details</Link>
+                                            <Link href="/profile/edit">Update details</Link>
                                         </Button>
                                         <Button asChild size="sm" variant="outline" className="w-full">
                                             <Link href="/feed">Back to feed</Link>
@@ -429,7 +429,7 @@ export default async function ProfilePage() {
                             </CardHeader>
                             <CardContent className="space-y-2">
                                 <Button asChild variant="outline" className="w-full justify-start">
-                                    <Link href="/onboarding/profile">
+                                    <Link href="/profile/edit">
                                         <UserCircle2 className="mr-2 h-4 w-4" />
                                         Edit profile details
                                     </Link>

@@ -2,13 +2,15 @@ import Image from 'next/image'
 import type { Metadata } from 'next'
 
 import { AuthForm } from '@/components/auth/auth-form'
-import { LoginFeatureList } from '@/components/auth/login-feature-list'
 import { LoginSampleEvents } from '@/components/auth/login-sample-events'
 import { RotatingActivityTitle } from '@/components/auth/rotating-activity-title'
 
 export const metadata: Metadata = {
-    title: 'OuterCircl · Login',
-    description: 'Join local adventures with neighbors and trusted hosts.',
+    title: 'Login',
+    description: 'Sign in to OuterCircl and RSVP for trusted local activities near you.',
+    alternates: {
+        canonical: '/login',
+    },
 }
 
 interface LoginPageProps {
@@ -45,8 +47,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                         toddler meetups, and more. Sign in to RSVP without missing the next invite.
                     </p>
                 </div>
-
-                {/* <LoginFeatureList /> */}
 
                 <LoginSampleEvents />
 

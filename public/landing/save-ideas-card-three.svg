@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 240" role="img" aria-labelledby="title desc">
+  <title id="title">Save Ideas Card Three Placeholder</title>
+  <desc id="desc">Placeholder card image for save ideas section.</desc>
+  <rect width="600" height="240" rx="26" fill="#3d3142" />
+  <circle cx="76" cy="120" r="34" fill="#755481" />
+  <text x="140" y="130" fill="#fff0ff" font-size="42" font-family="Arial, sans-serif" font-weight="700">Hand-picked events</text>
+</svg>

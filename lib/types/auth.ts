@@ -43,6 +43,8 @@ export interface BackendMeResponse {
   supabaseUserId: string;
   email: string;
   hasOnboarded: boolean;
+  interests: string[];
+  profilePictureUrl: string | null;
   role: string;
   type: TierKey;
   tierRules: MembershipTierRules;

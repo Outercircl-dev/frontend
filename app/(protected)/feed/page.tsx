@@ -78,7 +78,7 @@ export default function FeedPage() {
     return Array.from(set).sort((a, b) => a.localeCompare(b))
   }, [raw])
 
-  const filteredItems = useMemo(() => {
+  const { recommendedItems, otherItems, totalVisibleItems } = useMemo(() => {
     const items = (raw?.items ?? []).slice()
     const q = normalize(query)
 
@@ -109,14 +109,20 @@ export default function FeedPage() {
     }
 
     const visible = items.filter((a) => isUpcoming(a) && matchesQuery(a) && matchesCategory(a))
+    const recommended = visible.filter((a) => (a.interestMatchCount ?? 0) > 0)
+    const other = visible.filter((a) => (a.interestMatchCount ?? 0) === 0)
 
-    visible.sort((a, b) =>
+    other.sort((a, b) =>
       sort === 'latest'
         ? parsedCreated(b) - parsedCreated(a)
         : parsedCreated(a) - parsedCreated(b),
     )
 
-    return visible
+    return {
+      recommendedItems: recommended,
+      otherItems: other,
+      totalVisibleItems: visible.length,
+    }
   }, [raw, query, category, sort])
 
   const handleActivityUpdated = (updatedActivity: Activity) => {
@@ -217,7 +223,7 @@ export default function FeedPage() {
               </Card>
             ))}
           </div>
-        ) : raw && filteredItems.length === 0 ? (
+        ) : raw && totalVisibleItems === 0 ? (
           <Card>
             <CardHeader>
               <CardTitle>No activities found</CardTitle>
@@ -238,7 +244,7 @@ export default function FeedPage() {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
               <div>
-                Showing <span className="font-medium text-foreground">{filteredItems.length}</span>
+                Showing <span className="font-medium text-foreground">{totalVisibleItems}</span>
                 {raw ? (
                   <>
                     {' '}
@@ -268,17 +274,51 @@ export default function FeedPage() {
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {filteredItems.map((activity) => (
-                <ActivityCard
-                  key={activity.id}
-                  activity={activity}
-                  viewerId={user?.supabaseUserId}
-                  clickHref={`/activities/${activity.id}`}
-                  onActivityUpdated={handleActivityUpdated}
-                />
-              ))}
-            </div>
+            {recommendedItems.length > 0 ? (
+              <section className="space-y-3">
+                <div className="space-y-1">
+                  <h2 className="text-xl font-semibold tracking-tight">Recommended for you</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Based on interests you selected in your profile.
+                  </p>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {recommendedItems.map((activity) => (
+                    <div key={activity.id} className="space-y-2">
+                      <p className="text-xs font-medium text-primary">
+                        Matches {activity.interestMatchCount} of your interests
+                      </p>
+                      <ActivityCard
+                        activity={activity}
+                        viewerId={user?.supabaseUserId}
+                        clickHref={`/activities/${activity.id}`}
+                        onActivityUpdated={handleActivityUpdated}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            <section className="space-y-3">
+              <div className="space-y-1">
+                <h2 className="text-xl font-semibold tracking-tight">More activities</h2>
+                <p className="text-sm text-muted-foreground">
+                  Browse additional upcoming activities in your area.
+                </p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {otherItems.map((activity) => (
+                  <ActivityCard
+                    key={activity.id}
+                    activity={activity}
+                    viewerId={user?.supabaseUserId}
+                    clickHref={`/activities/${activity.id}`}
+                    onActivityUpdated={handleActivityUpdated}
+                  />
+                ))}
+              </div>
+            </section>
           </div>
         )}
       </main>

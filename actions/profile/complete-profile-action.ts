@@ -54,6 +54,15 @@ function toApiErrorBody(value: unknown): ApiErrorBody {
   return { message, details }
 }
 
+function sanitizeProfilePictureUrl(value: string | null): string | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed || trimmed.startsWith('blob:')) {
+    return null
+  }
+  return trimmed
+}
+
 async function postProfile(payload: Record<string, unknown>): Promise<ProfileFormState> {
   const cookieHeader = await buildCookieHeader()
 
@@ -114,7 +123,9 @@ export async function completeProfileAction(
     fullName: formData.get('fullName') as string,
     dateOfBirth: formData.get('dateOfBirth') as string,
     gender: formData.get('gender') as string,
-    profilePictureUrl: (formData.get('profilePictureUrl') as string | null) || null,
+    profilePictureUrl: sanitizeProfilePictureUrl(
+      (formData.get('profilePictureUrl') as string | null) || null,
+    ),
     interests: formData.getAll('interests') as string[],
     bio: (formData.get('bio') as string) || '',
     hobbies: (formData.getAll('hobbies') as string[]).filter(Boolean),
