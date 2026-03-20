@@ -133,12 +133,7 @@ export function ProtectedHeader() {
                     Pricing
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={(event) => {
-                    event.preventDefault()
-                    openNotificationsDrawer()
-                  }}
-                >
+                <DropdownMenuItem onSelect={() => openNotificationsDrawer()}>
                   <Bell className="h-4 w-4" />
                   Notifications
                 </DropdownMenuItem>
