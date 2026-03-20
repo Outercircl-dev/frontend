@@ -70,11 +70,18 @@ export function NotificationsDrawer() {
 
   return (
     <>
-      {isOpen ? <button className="fixed inset-0 z-80 bg-black/40" onClick={() => setIsOpen(false)} /> : null}
+      {isOpen ? (
+        <button
+          type="button"
+          aria-label="Close notifications drawer"
+          className="fixed inset-0 z-90 bg-black/40"
+          onClick={() => setIsOpen(false)}
+        />
+      ) : null}
 
       <aside
-        className={`fixed right-0 top-0 z-90 h-full w-full max-w-full transform border-l bg-background shadow-2xl transition-transform duration-300 sm:max-w-md ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`fixed right-0 top-0 z-100 h-full w-full max-w-full transform border-l bg-background shadow-2xl transition-transform duration-300 sm:max-w-md ${
+          isOpen ? 'pointer-events-auto translate-x-0' : 'pointer-events-none translate-x-full'
         }`}
         aria-hidden={!isOpen}
       >
