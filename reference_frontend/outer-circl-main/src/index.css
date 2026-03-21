@@ -1,0 +1,411 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Pinterest-style critical optimizations */
+@layer base {
+  /* System font stack for Pinterest performance */
+  html {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+  
+  /* Pinterest image optimization */
+  img {
+    height: auto;
+    max-width: 100%;
+    border-radius: 16px; /* Pinterest rounded corners */
+  }
+  
+  /* Touch optimization */
+  * {
+    -webkit-overflow-scrolling: touch;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer base {
+:root {
+    /* Pinterest-inspired color palette */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    /* Primary brand colors - Pinterest style */
+    --primary: 351 84% 57%; /* Pinterest red */
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 351 90% 52%;
+    --primary-active: 351 80% 47%;
+
+    /* Secondary colors */
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 351 84% 57%;
+
+    /* Pinterest-style design tokens */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-hover)));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted) / 0.3));
+    --shadow-elegant: 0 8px 32px hsl(var(--primary) / 0.15);
+    --shadow-hover: 0 12px 40px hsl(var(--primary) / 0.2);
+    --shadow-soft: 0 4px 16px hsl(220 13% 13% / 0.1);
+    
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 351 84% 57%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 351 90% 62%;
+    --primary-active: 351 80% 52%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 351 84% 57%;
+
+    /* Dark mode adjustments */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-hover)));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted) / 0.3));
+    --shadow-elegant: 0 8px 32px hsl(var(--primary) / 0.25);
+    --shadow-hover: 0 12px 40px hsl(var(--primary) / 0.3);
+    --shadow-soft: 0 4px 16px hsl(0 0% 0% / 0.3);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* Improve mobile touch targets and readability */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Prevent zoom on input focus on iOS */
+    -webkit-text-size-adjust: 100%;
+    /* Improved mobile scrolling */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+  }
+  
+  /* Improve mobile input experience */
+  input, textarea, select {
+    @apply text-base;
+    /* Prevent zoom on iOS when input is focused */
+    max-width: 100%;
+  }
+  
+  /* Better button touch targets */
+  button, [role="button"], .btn {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
+  }
+  
+  /* Mobile-first responsive font sizes */
+  @media (max-width: 640px) {
+    input, textarea, select {
+      font-size: 16px; /* Prevent zoom on iOS */
+    }
+    
+    h1 { font-size: 1.875rem; } /* 30px */
+    h2 { font-size: 1.5rem; }   /* 24px */
+    h3 { font-size: 1.25rem; }  /* 20px */
+  }
+  
+  /* Improve focus indicators for accessibility */
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+/* Pinterest-inspired uniform grid - mobile optimized */
+.pinterest-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  grid-gap: 16px;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .pinterest-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: 24px;
+  }
+}
+
+.pinterest-grid > * {
+  break-inside: avoid;
+}
+
+.pinterest-item {
+  margin-bottom: 12px;
+  display: inline-block;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .pinterest-item {
+    margin-bottom: 16px;
+  }
+}
+
+/* Pinterest-style header animation */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.pinterest-header {
+  animation: float 5s ease-in-out infinite;
+}
+
+/* Highlighter animation for How It Works section */
+@keyframes highlightPulse {
+  0%, 100% {
+    opacity: 0.85;
+    transform: scale(1) rotate(-1deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02) rotate(-1deg);
+  }
+}
+
+.highlight-animation {
+  animation: highlightPulse 3s ease-in-out infinite;
+}
+
+/* Mobile-optimized card hover effects */
+.pinterest-card-hover {
+  transition: all 0.3s ease;
+}
+
+.pinterest-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+@media (min-width: 640px) {
+  .pinterest-card-hover:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Save ideas section highlight */
+.save-ideas-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.save-ideas-glow::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle at center,
+    rgba(230, 0, 35, 0.1) 0%,
+    rgba(230, 0, 35, 0) 50%
+  );
+  animation: pulse 4s ease-in-out infinite;
+  z-index: 0;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* Mobile-specific utilities */
+@layer utilities {
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+  
+  /* Improved mobile tap targets */
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Safe area insets for mobile */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Mobile performance optimizations */
+  .will-change-transform {
+    will-change: transform;
+  }
+  
+  .will-change-scroll {
+    will-change: scroll-position;
+  }
+  
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+  
+  /* Mobile spacing utilities */
+  .mobile-p-4 {
+    @apply p-4;
+  }
+  
+  @media (min-width: 640px) {
+    .mobile-p-4 {
+      @apply p-6;
+    }
+  }
+  
+  .mobile-gap-4 {
+    @apply gap-4;
+  }
+  
+  @media (min-width: 640px) {
+    .mobile-gap-4 {
+      @apply gap-6;
+    }
+  }
+  
+  /* Better loading states */
+  .loading-skeleton {
+    background: linear-gradient(90deg, 
+      hsl(var(--muted)) 25%, 
+      hsl(var(--muted-foreground) / 0.1) 50%, 
+      hsl(var(--muted)) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+  }
+  
+  @keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  
+  /* Mobile-optimized card interactions */
+  .mobile-card {
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+  }
+  
+  .mobile-card:active {
+    transform: scale(0.98);
+  }
+  
+  @media (min-width: 640px) {
+    .mobile-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .mobile-card:active {
+      transform: translateY(-1px);
+    }
+  }
+}
+
+/* Pinterest-style CSS utilities */
+@layer utilities {
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+}
