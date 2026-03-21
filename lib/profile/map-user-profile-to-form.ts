@@ -28,6 +28,5 @@ export function mapUserProfileToForm(profile: UserProfile): OnboardingFormData {
     acceptedGuidelines: Boolean(profile.accepted_guidelines),
     // Existing completed profiles should default these confirmations to true in edit mode.
     confirmedAge: true,
-    confirmedPlatonic: true,
   }
 }

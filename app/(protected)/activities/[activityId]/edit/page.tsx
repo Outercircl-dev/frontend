@@ -19,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useAuthState } from '@/hooks/useAuthState'
 import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
 import { uploadActivityImage, validateActivityImage } from '@/lib/api/activity-image-upload'
+import { ACTIVITY_CATEGORY_OPTIONS, type ActivityCategoryOption } from '@/lib/activity-categories'
 import type { Activity } from '@/lib/types/activity'
 import type { InterestCategory } from '@/lib/types/profile'
 import { cn } from '@/lib/utils'
@@ -28,11 +29,26 @@ import {
   resolveClientTimezone,
   validateActivityCreationInput,
 } from '@/src/utils/activityCreationValidation'
+import type { ActivityGenderRestriction, RecurrenceWeekday } from '@/lib/types/activity'
+
+const WEEKDAYS: Array<{ value: RecurrenceWeekday; label: string }> = [
+  { value: 'monday', label: 'Mon' },
+  { value: 'tuesday', label: 'Tue' },
+  { value: 'wednesday', label: 'Wed' },
+  { value: 'thursday', label: 'Thu' },
+  { value: 'friday', label: 'Fri' },
+  { value: 'saturday', label: 'Sat' },
+  { value: 'sunday', label: 'Sun' },
+]
 
 type Group = {
   id: string
   name: string
   is_public: boolean
+}
+
+function isActivityCategoryOption(value: string): value is ActivityCategoryOption {
+  return ACTIVITY_CATEGORY_OPTIONS.includes(value as ActivityCategoryOption)
 }
 
 export default function EditActivityPage({ params }: { params: Promise<{ activityId: string }> }) {
@@ -70,6 +86,8 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
   const [interval, setInterval] = useState('1')
   const [endsOn, setEndsOn] = useState('')
   const [occurrences, setOccurrences] = useState('')
+  const [weeklyDays, setWeeklyDays] = useState<RecurrenceWeekday[]>(['monday'])
+  const [genderRestriction, setGenderRestriction] = useState<ActivityGenderRestriction>('none')
 
   const [groups, setGroups] = useState<Group[]>([])
   const [interestCategories, setInterestCategories] = useState<InterestCategory[]>([])
@@ -118,7 +136,8 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
         setActivity(data)
         setTitle(data.title)
         setDescription(data.description ?? '')
-        setCategory(data.category ?? '')
+        const normalizedCategory = data.category && isActivityCategoryOption(data.category) ? data.category : ''
+        setCategory(normalizedCategory)
         setSelectedInterests(data.interests ?? [])
         const latitude = data.location?.latitude
         const longitude = data.location?.longitude
@@ -138,12 +157,16 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
         setCurrentImageUrl(data.imageUrl ?? null)
         setRemoveImage(false)
         setImageFile(null)
+        setGenderRestriction(data.genderRestriction ?? 'none')
         if (data.recurrence) {
           setRecurrenceEnabled(true)
           setFrequency(data.recurrence.frequency)
           setInterval(String(data.recurrence.interval))
           setEndsOn(data.recurrence.endsOn ?? '')
           setOccurrences(data.recurrence.occurrences ? String(data.recurrence.occurrences) : '')
+          setWeeklyDays(data.recurrence.weekdays?.length ? data.recurrence.weekdays : ['monday'])
+        } else {
+          setWeeklyDays(['monday'])
         }
       } catch (err) {
         if (!cancelled) setError(getErrorMessage(err, 'Failed to load activity'))
@@ -278,8 +301,10 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
               interval: Number(interval || 1),
               endsOn: endsOn || undefined,
               occurrences: occurrences ? Number(occurrences) : undefined,
+              weekdays: frequency === 'weekly' ? weeklyDays : undefined,
             }
           : undefined,
+        genderRestriction,
         imageUrl: imageFile
           ? await uploadActivityImage(imageFile)
           : removeImage
@@ -391,7 +416,18 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
             <Label className="flex items-center gap-1">
               Category <span className="text-red-500">*</span>
             </Label>
-            <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Category" required />
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {ACTIVITY_CATEGORY_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-3">
             <Label className="flex items-center gap-1">
@@ -515,6 +551,23 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-2">
+            <Label>Gender restriction</Label>
+            <Select
+              value={genderRestriction}
+              onValueChange={(v) => setGenderRestriction(v as ActivityGenderRestriction)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Restriction" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No restriction</SelectItem>
+                <SelectItem value="men_only">Men only</SelectItem>
+                <SelectItem value="women_only">Women only</SelectItem>
+                <SelectItem value="other_only">Other only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="space-y-2">
             <Select
@@ -574,11 +627,40 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
                   placeholder="Occurrences"
                 />
               </div>
-            ) : (
+            ) : null}
+            {recurrenceEnabled && frequency === 'weekly' ? (
+              <div className="space-y-2">
+                <Label>Repeat on</Label>
+                <div className="flex flex-wrap gap-2">
+                  {WEEKDAYS.map((weekday) => {
+                    const isSelected = weeklyDays.includes(weekday.value)
+                    return (
+                      <Button
+                        key={weekday.value}
+                        type="button"
+                        size="sm"
+                        variant={isSelected ? 'default' : 'outline'}
+                        onClick={() =>
+                          setWeeklyDays((previous) => {
+                            if (previous.includes(weekday.value)) {
+                              if (previous.length === 1) return previous
+                              return previous.filter((value) => value !== weekday.value)
+                            }
+                            return [...previous, weekday.value]
+                          })
+                        }
+                      >
+                        {weekday.label}
+                      </Button>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : !recurrenceEnabled ? (
               <p className="text-xs text-muted-foreground">
                 Enable recurring schedule to repeat this activity automatically.
               </p>
-            )}
+            ) : null}
           </div>
           {error && !locationValidationError && !scheduleValidationError ? (
             <ErrorBlock title="Couldn't update activity" message={error} />

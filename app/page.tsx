@@ -40,10 +40,7 @@ export default function Home() {
                 <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-center gap-4 text-center">
                     <div className="space-y-0.5 leading-tight">
                         <p className="text-sm font-semibold tracking-tight sm:text-base">
-                            Sign up to the buzz today for exclusive discounts
-                        </p>
-                        <p className="text-[11px] font-medium text-white/90 sm:text-xs">
-                            Beta Version - Sign up today for Premium Membership offers!
+                            Sign up today for exclusive offers for Beta version
                         </p>
                     </div>
                     <Link
@@ -172,10 +169,11 @@ export default function Home() {
                     <div className="relative z-10 mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-[0.36fr_0.64fr] lg:gap-16">
                         <div className="space-y-5 sm:space-y-6">
                             <h2 className="text-3xl font-bold leading-tight text-[#0A5F55] sm:text-4xl md:text-5xl">
-                                Save ideas you like
+                                See It. Save It. Be There.
                             </h2>
                             <p className="text-lg leading-relaxed text-slate-700 sm:text-xl">
-                                Commit to activities you like. Activities are confirmed once people join.
+                                Discover activities, plan your week, or jump into something spontaneous
+                                &mdash; all in one place.
                             </p>
                             <Link
                                 href="/login"
@@ -324,7 +322,7 @@ export default function Home() {
                                 href="/login"
                                 className="inline-flex rounded-full bg-[#e60023] px-6 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:bg-[#d50c22] hover:shadow-lg"
                             >
-                                Explore activities
+                                Start today
                             </Link>
                         </div>
                     </div>
@@ -337,14 +335,14 @@ export default function Home() {
                         <div>
                             <Image
                                 src="/logo.png"
-                                alt="OuterCircl"
+                                alt="outercircl"
                                 width={140}
                                 height={40}
                                 className="h-8 w-auto"
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-8 md:grid-cols-3">
+                        <div className="grid grid-cols-2 gap-8 md:grid-cols-2">
                             <div>
                                 <p className="mb-4 font-semibold">Company</p>
                                 <ul className="space-y-2 text-gray-500">
@@ -364,9 +362,12 @@ export default function Home() {
                                         </Link>
                                     </li>
                                     <li>
-                                        <Link href="/login" className="hover:text-[#7a1555]">
-                                            Contact
-                                        </Link>
+                                        <a
+                                            href="mailto:hello@outercircl.com"
+                                            className="hover:text-[#7a1555]"
+                                        >
+                                            hello@outercircl.com
+                                        </a>
                                     </li>
                                 </ul>
                             </div>
@@ -374,11 +375,6 @@ export default function Home() {
                             <div>
                                 <p className="mb-4 font-semibold">Resources</p>
                                 <ul className="space-y-2 text-gray-500">
-                                    <li>
-                                        <Link href="/login" className="hover:text-[#7a1555]">
-                                            Community Guidelines
-                                        </Link>
-                                    </li>
                                     <li>
                                         <Link href="/login" className="hover:text-[#7a1555]">
                                             Help Center
@@ -392,31 +388,6 @@ export default function Home() {
                                 </ul>
                             </div>
 
-                            <div>
-                                <p className="mb-4 font-semibold">Follow Us</p>
-                                <ul className="space-y-2 text-gray-500">
-                                    <li>
-                                        <a
-                                            href="https://www.tiktok.com/@outercircl"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="hover:text-[#7a1555]"
-                                        >
-                                            TikTok
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a
-                                            href="https://www.instagram.com/outercircl/"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="hover:text-[#7a1555]"
-                                        >
-                                            Instagram
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
                         </div>
                     </div>
 

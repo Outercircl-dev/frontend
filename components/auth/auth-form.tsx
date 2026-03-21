@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { trackAuthCompleted } from '@/lib/analytics/events'
 import { cn } from '@/lib/utils'
 
 type Intent = 'signin' | 'signup'
@@ -32,8 +33,9 @@ export function AuthForm() {
     useEffect(() => {
         if (state.status === 'success') {
             formRef.current?.reset()
+            trackAuthCompleted(intent)
         }
-    }, [state.status])
+    }, [intent, state.status])
 
     const submitLabel = intent === 'signin' ? 'Send sign-in link' : 'Create account'
 

@@ -117,19 +117,19 @@ async function mockAuthenticatedUser(page: import('@playwright/test').Page) {
               email: 'host@example.com',
               supabaseUserId: 'host-123',
               role: 'authenticated',
-              type: 'FREEMIUM',
+              type: 'PREMIUM',
               tierRules: {
                 hosting: {
-                  maxParticipantsPerActivity: 4,
-                  maxHostsPerMonth: 2,
-                  enforceExactMaxParticipants: true,
+                  maxParticipantsPerActivity: null,
+                  maxHostsPerMonth: null,
+                  enforceExactMaxParticipants: false,
                 },
                 groups: {
-                  enabled: false,
+                  enabled: true,
                   maxMembers: 15,
                 },
                 ads: {
-                  showsAds: true,
+                  showsAds: false,
                 },
                 verification: {
                   requiresVerifiedHostForHosting: true,
@@ -174,7 +174,8 @@ async function fillRequiredActivityFields(
 ) {
   const selectLocation = options?.selectLocation ?? true
   await page.getByPlaceholder('Title').fill('Morning Run')
-  await page.getByPlaceholder('Category').fill('Sports')
+  await page.getByRole('combobox', { name: 'Select category' }).click()
+  await page.getByRole('option', { name: 'Sports & Fitness' }).click()
   await page.getByRole('button', { name: /Running/i }).click()
   const locationInput = page.getByPlaceholder('Search address or place')
   await locationInput.fill(address)

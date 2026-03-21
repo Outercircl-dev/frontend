@@ -35,6 +35,25 @@ function titleCase(value: string | null | undefined, fallback = '') {
     .join(' ')
 }
 
+function restrictionLabel(restriction: 'none' | 'men_only' | 'women_only' | 'other_only') {
+  if (restriction === 'men_only') return 'Men only'
+  if (restriction === 'women_only') return 'Women only'
+  if (restriction === 'other_only') return 'Other only'
+  return 'Open'
+}
+
+function recurrenceLabel(activity: Activity) {
+  if (!activity.recurrence) return null
+  const every = activity.recurrence.interval > 1 ? `Every ${activity.recurrence.interval}` : 'Every'
+  if (activity.recurrence.frequency === 'weekly' && activity.recurrence.weekdays?.length) {
+    const days = activity.recurrence.weekdays
+      .map((weekday) => weekday.slice(0, 1).toUpperCase() + weekday.slice(1, 3))
+      .join(', ')
+    return `${every} week (${days})`
+  }
+  return `${every} ${activity.recurrence.frequency}`
+}
+
 export function ActivityCard({
   activity,
   viewerId,
@@ -155,6 +174,9 @@ export function ActivityCard({
             {activity.isPublic ? 'Public' : 'Private'}
           </Badge>
           <Badge variant="outline" className="text-xs">
+            {restrictionLabel(activity.genderRestriction)}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
             Host {hostLabel}
           </Badge>
         </div>
@@ -176,6 +198,11 @@ export function ActivityCard({
             <MapPin className="h-4 w-4" />
             <span className="line-clamp-1 text-foreground">{locationLabel}</span>
           </div>
+          {activity.recurrence ? (
+            <div className="sm:col-span-2">
+              <span className="text-foreground">{recurrenceLabel(activity)}</span>
+            </div>
+          ) : null}
         </div>
 
         <div className="space-y-2 rounded-lg border bg-muted/30 p-3">

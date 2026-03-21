@@ -172,7 +172,7 @@ export default function ActivitiesPage() {
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-10 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
-            <h1 className="text-3xl font-semibold tracking-tight">My Activities</h1>
+            <h1 className="text-3xl font-semibold tracking-tight">My Circl</h1>
             <p className="text-sm text-muted-foreground">Everything you host or are attending, plus what’s trending.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

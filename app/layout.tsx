@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { PosthogProvider } from "@/components/analytics/PosthogProvider";
+import { CookieBanner } from "@/components/legal/CookieBanner";
 import { NotificationsDrawer } from "@/components/notifications/NotificationsDrawer";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -69,9 +71,9 @@ export const metadata: Metadata = {
   },
   manifest: '/manifest.webmanifest',
   icons: {
-    icon: '/next.svg',
-    shortcut: '/next.svg',
-    apple: '/next.svg',
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/icon.png',
   },
 };
 
@@ -85,9 +87,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
-        <NotificationsDrawer />
-        <Toaster />
+        <PosthogProvider>
+          {children}
+          <NotificationsDrawer />
+          <Toaster />
+          <CookieBanner />
+        </PosthogProvider>
       </body>
     </html>
   );

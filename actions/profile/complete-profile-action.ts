@@ -139,7 +139,6 @@ export async function completeProfileAction(
     acceptedTos: formData.get('acceptedTos') === 'true',
     acceptedGuidelines: formData.get('acceptedGuidelines') === 'true',
     confirmedAge: formData.get('confirmedAge') === 'true',
-    confirmedPlatonic: formData.get('confirmedPlatonic') === 'true',
   }
 
   const parsed = completeProfileSchema.safeParse(rawData)

@@ -6,7 +6,6 @@ import {
     CheckCircle2,
     Compass,
     Heart,
-    ShieldCheck,
     Sparkles,
     UserCircle2,
     Users,
@@ -435,15 +434,9 @@ export default async function ProfilePage() {
                                     </Link>
                                 </Button>
                                 <Button asChild variant="outline" className="w-full justify-start">
-                                    <Link href="/pricing">
-                                        <ShieldCheck className="mr-2 h-4 w-4" />
-                                        Explore premium
-                                    </Link>
-                                </Button>
-                                <Button asChild variant="outline" className="w-full justify-start">
                                     <Link href="/activities">
                                         <Compass className="mr-2 h-4 w-4" />
-                                        My activities
+                                        My Circl
                                     </Link>
                                 </Button>
                             </CardContent>

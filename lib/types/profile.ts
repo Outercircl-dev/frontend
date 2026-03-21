@@ -77,7 +77,6 @@ export interface OnboardingFormData {
   acceptedTos: boolean
   acceptedGuidelines: boolean
   confirmedAge: boolean
-  confirmedPlatonic: boolean
 }
 
 // Validated onboarding data (after form validation)
@@ -99,7 +98,6 @@ export interface OnboardingData {
   acceptedTos: true
   acceptedGuidelines: true
   confirmedAge: true
-  confirmedPlatonic: true
 }
 
 export const defaultOnboardingData: OnboardingFormData = {
@@ -121,6 +119,5 @@ export const defaultOnboardingData: OnboardingFormData = {
   acceptedTos: false,
   acceptedGuidelines: false,
   confirmedAge: false,
-  confirmedPlatonic: false,
 }
 

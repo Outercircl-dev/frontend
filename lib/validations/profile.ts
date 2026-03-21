@@ -96,11 +96,6 @@ export const guidelinesSchema = z.object({
   confirmedAge: z
     .boolean()
     .refine((value) => value, { message: 'You must confirm you are 18 or older' }),
-  confirmedPlatonic: z
-    .boolean()
-    .refine((value) => value, {
-      message: 'You must acknowledge OuterCircl is for platonic connections',
-    }),
 })
 
 // Complete profile schema (all steps combined)
@@ -171,6 +166,5 @@ export const defaultProfileValues = {
   acceptedTos: false,
   acceptedGuidelines: false,
   confirmedAge: false,
-  confirmedPlatonic: false,
 }
 

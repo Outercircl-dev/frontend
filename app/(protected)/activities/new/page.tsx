@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { UpgradeHint } from '@/components/membership/UpgradeHint'
 import { PlaceAutocompleteInput, type SelectedPlace } from '@/components/activities/place-autocomplete-input'
 import { getInterestsAction } from '@/actions/profile'
 import { useAuthState } from '@/hooks/useAuthState'
@@ -24,7 +23,20 @@ import { cn } from '@/lib/utils'
 import type { InterestCategory } from '@/lib/types/profile'
 import { uploadActivityImage, validateActivityImage } from '@/lib/api/activity-image-upload'
 import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
+import { trackActivityCreated } from '@/lib/analytics/events'
 import { ErrorBlock } from '@/components/ui/error-block'
+import { ACTIVITY_CATEGORY_OPTIONS } from '@/lib/activity-categories'
+import type { ActivityGenderRestriction, RecurrenceWeekday } from '@/lib/types/activity'
+
+const WEEKDAYS: Array<{ value: RecurrenceWeekday; label: string }> = [
+  { value: 'monday', label: 'Mon' },
+  { value: 'tuesday', label: 'Tue' },
+  { value: 'wednesday', label: 'Wed' },
+  { value: 'thursday', label: 'Thu' },
+  { value: 'friday', label: 'Fri' },
+  { value: 'saturday', label: 'Sat' },
+  { value: 'sunday', label: 'Sun' },
+]
 
 type Group = {
   id: string
@@ -33,19 +45,8 @@ type Group = {
 }
 
 export default function CreateActivityPage() {
-  const { user } = useAuthState()
-  const tierRules = user?.tierRules
-  const hostingRules = tierRules?.hosting
-  const groupsRules = tierRules?.groups
-  const verificationRules = tierRules?.verification
-  const maxParticipantsLimit = hostingRules?.maxParticipantsPerActivity
-  const enforceExactMaxParticipants = hostingRules?.enforceExactMaxParticipants
-  const groupsEnabled = groupsRules?.enabled ?? false
-  const requiresVerifiedHost = Boolean(verificationRules?.requiresVerifiedHostForHosting)
-  const isVerifiedHost = user?.role === 'authenticated'
-  const canHost = !requiresVerifiedHost || isVerifiedHost
-  const maxParticipantsDisabled =
-    Boolean(enforceExactMaxParticipants) && maxParticipantsLimit !== null && maxParticipantsLimit !== undefined
+  useAuthState()
+  const groupsEnabled = true
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -64,6 +65,8 @@ export default function CreateActivityPage() {
   const [interval, setInterval] = useState('1')
   const [endsOn, setEndsOn] = useState('')
   const [occurrences, setOccurrences] = useState('')
+  const [weeklyDays, setWeeklyDays] = useState<RecurrenceWeekday[]>(['monday'])
+  const [genderRestriction, setGenderRestriction] = useState<ActivityGenderRestriction>('none')
 
   const [groups, setGroups] = useState<Group[]>([])
   const [interestCategories, setInterestCategories] = useState<InterestCategory[]>([])
@@ -74,15 +77,6 @@ export default function CreateActivityPage() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-
-  useEffect(() => {
-    if (maxParticipantsLimit === null || maxParticipantsLimit === undefined) {
-      return
-    }
-    if (maxParticipantsDisabled || !maxParticipants) {
-      setMaxParticipants(String(maxParticipantsLimit))
-    }
-  }, [maxParticipantsDisabled, maxParticipantsLimit, maxParticipants])
 
   useEffect(() => {
     if (!groupsEnabled) return
@@ -169,7 +163,7 @@ export default function CreateActivityPage() {
       startTime &&
       endTime &&
       maxParticipants,
-  ) && canHost && !semanticValidationError
+  ) && !semanticValidationError
 
   const handleSubmit = async () => {
     try {
@@ -181,12 +175,6 @@ export default function CreateActivityPage() {
       setError(null)
 
       const numericMaxParticipants = Number(maxParticipants)
-      const resolvedMaxParticipants =
-        maxParticipantsLimit !== null &&
-        maxParticipantsLimit !== undefined &&
-        (maxParticipantsDisabled || numericMaxParticipants > maxParticipantsLimit)
-          ? maxParticipantsLimit
-          : numericMaxParticipants
 
       const payload = {
         title,
@@ -203,7 +191,7 @@ export default function CreateActivityPage() {
         startTime,
         endTime,
         timezone,
-        maxParticipants: resolvedMaxParticipants,
+        maxParticipants: numericMaxParticipants,
         isPublic,
         groupId: groupsEnabled ? groupId : undefined,
         recurrence: recurrenceEnabled
@@ -212,8 +200,10 @@ export default function CreateActivityPage() {
               interval: Number(interval || 1),
               endsOn: endsOn || undefined,
               occurrences: occurrences ? Number(occurrences) : undefined,
+              weekdays: frequency === 'weekly' ? weeklyDays : undefined,
             }
           : undefined,
+        genderRestriction,
         imageUrl: imageFile ? await uploadActivityImage(imageFile) : undefined,
       }
 
@@ -226,6 +216,7 @@ export default function CreateActivityPage() {
         },
         'Failed to create activity',
       )
+      trackActivityCreated(activity.id)
       window.location.href = `/activities/${activity.id}`
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to create activity'))
@@ -248,9 +239,6 @@ export default function CreateActivityPage() {
             <Save className="h-4 w-4" />
             Create activity
           </Button>
-          {!canHost ? (
-            <UpgradeHint message="Hosting requires a verified plan." className="text-xs" />
-          ) : null}
         </div>
       </div>
 
@@ -319,7 +307,18 @@ export default function CreateActivityPage() {
             <Label className="flex items-center gap-1">
               Category <span className="text-red-500">*</span>
             </Label>
-            <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Category" required />
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {ACTIVITY_CATEGORY_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-3">
             <Label className="flex items-center gap-1">
@@ -424,7 +423,6 @@ export default function CreateActivityPage() {
               <Input
                 type="number"
                 min={1}
-                max={maxParticipantsLimit ?? undefined}
                 value={maxParticipants}
                 onChange={(e) => {
                   const next = e.target.value
@@ -434,19 +432,10 @@ export default function CreateActivityPage() {
                   }
                   const numeric = Number(next)
                   if (Number.isNaN(numeric)) return
-                  if (maxParticipantsLimit !== null && maxParticipantsLimit !== undefined && numeric > maxParticipantsLimit) {
-                    setMaxParticipants(String(maxParticipantsLimit))
-                    return
-                  }
                   setMaxParticipants(next)
                 }}
-                placeholder={maxParticipantsDisabled ? `Fixed at ${maxParticipantsLimit}` : 'Max participants'}
-                disabled={maxParticipantsDisabled}
-                className={cn(maxParticipantsDisabled && 'opacity-60')}
+                placeholder="Max participants"
               />
-              {maxParticipantsDisabled ? (
-                <UpgradeHint message="Adjusting participant limits is a premium feature." className="text-xs" />
-              ) : null}
             </div>
             <Select value={isPublic ? 'public' : 'private'} onValueChange={(v) => setIsPublic(v === 'public')}>
               <SelectTrigger>
@@ -458,6 +447,23 @@ export default function CreateActivityPage() {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-2">
+            <Label>Gender restriction</Label>
+            <Select
+              value={genderRestriction}
+              onValueChange={(v) => setGenderRestriction(v as ActivityGenderRestriction)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Restriction" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No restriction</SelectItem>
+                <SelectItem value="men_only">Men only</SelectItem>
+                <SelectItem value="women_only">Women only</SelectItem>
+                <SelectItem value="other_only">Other only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="space-y-2">
             <Select
@@ -465,7 +471,7 @@ export default function CreateActivityPage() {
               onValueChange={(v) => setGroupId(v === 'none' ? undefined : v)}
               disabled={!groupsEnabled}
             >
-              <SelectTrigger className={cn(!groupsEnabled && 'opacity-60')}>
+              <SelectTrigger>
                 <SelectValue placeholder="Select group (optional)" />
               </SelectTrigger>
               <SelectContent>
@@ -477,9 +483,6 @@ export default function CreateActivityPage() {
                 ))}
               </SelectContent>
             </Select>
-            {!groupsEnabled ? (
-              <UpgradeHint message="Groups are available on higher tiers." className="text-xs" />
-            ) : null}
           </div>
 
           <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
@@ -516,11 +519,40 @@ export default function CreateActivityPage() {
                   placeholder="Occurrences"
                 />
               </div>
-            ) : (
+            ) : null}
+            {recurrenceEnabled && frequency === 'weekly' ? (
+              <div className="space-y-2">
+                <Label>Repeat on</Label>
+                <div className="flex flex-wrap gap-2">
+                  {WEEKDAYS.map((weekday) => {
+                    const isSelected = weeklyDays.includes(weekday.value)
+                    return (
+                      <Button
+                        key={weekday.value}
+                        type="button"
+                        size="sm"
+                        variant={isSelected ? 'default' : 'outline'}
+                        onClick={() =>
+                          setWeeklyDays((previous) => {
+                            if (previous.includes(weekday.value)) {
+                              if (previous.length === 1) return previous
+                              return previous.filter((value) => value !== weekday.value)
+                            }
+                            return [...previous, weekday.value]
+                          })
+                        }
+                      >
+                        {weekday.label}
+                      </Button>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : !recurrenceEnabled ? (
               <p className="text-xs text-muted-foreground">
                 Enable recurring schedule to repeat this activity automatically.
               </p>
-            )}
+            ) : null}
           </div>
           {error && !locationValidationError && !scheduleValidationError ? (
             <ErrorBlock title="Couldn't create activity" message={error} />

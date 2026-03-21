@@ -21,9 +21,6 @@ export default function PricingCancelPage() {
               No worries. You can upgrade anytime when you are ready.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2">
-              <Button asChild>
-                <Link href="/pricing">Back to pricing</Link>
-              </Button>
               <Button asChild variant="outline">
                 <Link href="/feed">Go to feed</Link>
               </Button>

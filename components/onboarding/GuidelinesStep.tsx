@@ -1,8 +1,7 @@
 'use client'
 
-import { useState } from 'react'
 import { UseFormReturn } from 'react-hook-form'
-import { Loader2, Shield, Heart, Users, AlertCircle } from 'lucide-react'
+import { Loader2, Shield, Users, AlertCircle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -44,28 +43,19 @@ const GUIDELINES = [
     description: 'Be respectful, inclusive, and help keep our community safe.',
     link: '/guidelines',
   },
-  {
-    id: 'confirmedPlatonic',
-    label: 'I understand OuterCircl is for platonic connections',
-    icon: Heart,
-    description:
-      'Our platform is designed to help you make genuine friendships, not romantic relationships.',
-  },
 ] as const
 
 export function GuidelinesStep({ form, onSubmit, onBack, isSubmitting }: GuidelinesStepProps) {
   const allChecked =
     form.watch('confirmedAge') &&
     form.watch('acceptedTos') &&
-    form.watch('acceptedGuidelines') &&
-    form.watch('confirmedPlatonic')
+    form.watch('acceptedGuidelines')
 
   const handleSubmit = async () => {
     const isValid = await form.trigger([
       'confirmedAge',
       'acceptedTos',
       'acceptedGuidelines',
-      'confirmedPlatonic',
     ])
     if (isValid) {
       await onSubmit()
@@ -133,8 +123,8 @@ export function GuidelinesStep({ form, onSubmit, onBack, isSubmitting }: Guideli
 
       <div className="rounded-xl bg-muted/50 p-4">
         <p className="text-center text-sm text-muted-foreground">
-          By completing your profile, you&apos;re joining a community of people looking to make
-          genuine, platonic connections through shared activities. Welcome to OuterCircl! 🎉
+          By completing your profile, you&apos;re joining a community built around shared activities.
+          Welcome to OuterCircl! 🎉
         </p>
       </div>
 

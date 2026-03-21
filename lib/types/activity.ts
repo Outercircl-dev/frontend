@@ -5,6 +5,16 @@ export interface ActivityLocation {
   placeId?: string
 }
 
+export type ActivityGenderRestriction = 'none' | 'men_only' | 'women_only' | 'other_only'
+export type RecurrenceWeekday =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday'
+
 export type ParticipationState = 'not_joined' | 'pending' | 'confirmed' | 'waitlisted'
 
 export interface ViewerParticipationMeta {
@@ -45,7 +55,9 @@ export interface Activity {
     interval: number
     endsOn: string | null
     occurrences: number | null
+    weekdays: RecurrenceWeekday[] | null
   } | null
+  genderRestriction: ActivityGenderRestriction
   createdAt: string
   updatedAt: string
   meetingPointHidden: boolean
