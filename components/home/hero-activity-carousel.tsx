@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
-const ACTIVITIES = ['Tues Toddler Meetup', 'Beach Cleanup', 'Ocean Dip', '3K Jog']
+const ACTIVITIES = ['Ocean Dip', '3k Jog', 'Tues Toddler Meetup', 'Beach Cleanup']
 const ROTATE_INTERVAL = 2600
 
 export function HeroActivityCarousel() {

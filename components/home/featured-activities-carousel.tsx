@@ -17,11 +17,11 @@ type FeaturedEvent = {
 }
 
 const HOMEPAGE_IMAGES = {
-    COLD_PLUNGE: '/landing/featured-cold-plunge.svg',
-    TODDLER_MEETUP: '/landing/featured-family-park.svg',
-    JOGGING: '/landing/featured-run-club.svg',
-    COFFEE_CODE: '/landing/featured-coffee.svg',
-    HIKING: '/landing/featured-family-park.svg',
+    COLD_PLUNGE: '/landing/cold-plunge-1.jpg',
+    TODDLER_MEETUP: '/landing/family-meetup-1.jpg',
+    JOGGING: '/landing/jogging-1.jpg',
+    COFFEE_CODE: '/landing/coffee-code-1.jpg',
+    HIKING: '/landing/hiking-1.jpg',
 } as const
 
 const featuredEvents: FeaturedEvent[] = [
@@ -121,10 +121,10 @@ export function FeaturedActivitiesCarousel() {
     }
 
     return (
-        <section id="featured" className="bg-white px-4 pb-14 pt-6 sm:pb-16">
+        <section id="featured" className="bg-white px-4 pb-8 pt-2 sm:pb-10">
             <div className="mx-auto w-full max-w-6xl">
-                <div className="mb-6 flex items-center justify-between">
-                    <h2 className="text-2xl font-semibold text-gray-800">Featured Activities</h2>
+                <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-xl font-semibold text-gray-800 sm:text-2xl">Featured Activities</h2>
                     <Link
                         href="/login"
                         className="inline-flex items-center gap-1 text-sm font-semibold text-[#E60023] transition hover:text-[#D50C22]"
@@ -142,10 +142,10 @@ export function FeaturedActivitiesCarousel() {
                         <article
                             key={event.id}
                             data-card
-                            className="w-full shrink-0 snap-start px-2 sm:w-1/2 md:px-4 lg:w-1/3 xl:w-1/4"
+                            className="w-full shrink-0 snap-start px-2 sm:w-1/2 md:px-4 lg:w-1/4"
                         >
-                            <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-[#ececf3] bg-white shadow-[0_10px_24px_rgba(26,29,45,0.08)]">
-                                <div className="relative h-44 w-full">
+                            <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-[#ececf3] bg-white shadow-[0_8px_20px_rgba(26,29,45,0.08)]">
+                                <div className="relative h-40 w-full sm:h-44">
                                     <Image
                                         src={event.imageUrl}
                                         alt={event.title}
@@ -154,34 +154,34 @@ export function FeaturedActivitiesCarousel() {
                                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                                     />
                                 </div>
-                                <div className="flex h-full flex-col p-4 text-sm">
-                                    <h3 className="line-clamp-2 min-h-[2.8rem] text-base font-semibold text-[#22243a]">
+                                <div className="flex h-full flex-col p-3 text-sm">
+                                    <h3 className="line-clamp-2 min-h-10 text-sm font-semibold text-[#22243a] sm:text-base">
                                         {event.title}
                                     </h3>
-                                    <p className="mt-2 line-clamp-2 min-h-[2.5rem] text-xs leading-5 text-[#5d6078]">
+                                    <p className="mt-1.5 line-clamp-2 min-h-[2.3rem] text-xs leading-5 text-[#5d6078]">
                                         {event.description}
                                     </p>
-                                    <div className="mt-3 text-xs font-medium text-[#6f7290]">
+                                    <div className="mt-2 text-[11px] font-medium text-[#6f7290]">
                                         {formatDate(event.date)} · {event.time}
                                     </div>
-                                    <p className="mt-1 line-clamp-1 min-h-[1rem] text-xs text-[#7a7d94]">
+                                    <p className="mt-1 line-clamp-1 min-h-4 text-[11px] text-[#7a7d94]">
                                         {event.location}
                                     </p>
-                                    <div className="mt-3 min-h-7">
+                                    <div className="mt-2 min-h-6">
                                         <div className="flex flex-wrap gap-1.5">
-                                        {event.categories.slice(0, 2).map((category) => (
-                                            <span
-                                                key={`${event.id}-${category}`}
-                                                className="rounded-full bg-[#f5f6fb] px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#6e7089]"
-                                            >
-                                                {category}
-                                            </span>
-                                        ))}
+                                            {event.categories.slice(0, 2).map((category) => (
+                                                <span
+                                                    key={`${event.id}-${category}`}
+                                                    className="rounded-full bg-[#f5f6fb] px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#6e7089]"
+                                                >
+                                                    {category}
+                                                </span>
+                                            ))}
                                         </div>
                                     </div>
                                     <Link
                                         href="/login"
-                                        className="mt-auto inline-flex items-center justify-center rounded-full bg-[#ed3551] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#d80f33]"
+                                        className="mt-2 inline-flex items-center justify-center rounded-full bg-[#ed3551] px-5 py-2 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(237,53,81,0.3)] transition hover:-translate-y-0.5 hover:bg-[#d80f33] hover:shadow-[0_10px_22px_rgba(216,15,51,0.34)] sm:mt-auto"
                                     >
                                         Sign in to join
                                     </Link>
@@ -191,7 +191,7 @@ export function FeaturedActivitiesCarousel() {
                     ))}
                 </div>
 
-                <div className="mt-6 flex justify-center gap-2">
+                <div className="mt-4 flex justify-center gap-2">
                     <button
                         type="button"
                         onClick={() => scrollByCard('prev')}
