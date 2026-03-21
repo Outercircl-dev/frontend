@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, type ReactNode } from 'react'
+import { Suspense, useEffect, type ReactNode } from 'react'
 
 import { initPosthog } from '@/lib/analytics/posthog-client'
 import { PosthogPageview } from '@/components/analytics/PosthogPageview'
@@ -16,7 +16,9 @@ export function PosthogProvider({ children }: PosthogProviderProps) {
 
   return (
     <>
-      <PosthogPageview />
+      <Suspense fallback={null}>
+        <PosthogPageview />
+      </Suspense>
       {children}
     </>
   )
