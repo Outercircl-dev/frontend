@@ -99,7 +99,6 @@ export default function OnboardingProfilePage() {
       formData.append('acceptedTos', String(data.acceptedTos))
       formData.append('acceptedGuidelines', String(data.acceptedGuidelines))
       formData.append('confirmedAge', String(data.confirmedAge))
-      formData.append('confirmedPlatonic', String(data.confirmedPlatonic))
 
       const result = await completeProfileAction(
         {

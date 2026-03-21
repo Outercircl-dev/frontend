@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, CalendarCheck2, LogOut, Plus, Settings, Tag, User2 } from 'lucide-react'
+import { Bell, CalendarCheck2, LogOut, Plus, Settings, User2 } from 'lucide-react'
 
 import { openNotificationsDrawer } from '@/components/notifications/drawer-events'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -124,13 +124,7 @@ export function ProtectedHeader() {
                 <DropdownMenuItem asChild>
                   <Link href="/activities" className="cursor-pointer">
                     <CalendarCheck2 className="h-4 w-4" />
-                    My activities
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/pricing" className="cursor-pointer">
-                    <Tag className="h-4 w-4" />
-                    Pricing
+                    My Circl
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => openNotificationsDrawer()}>

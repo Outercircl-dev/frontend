@@ -188,7 +188,6 @@ export function EditProfileForm({ initialValues, categories }: EditProfileFormPr
       formData.append('acceptedTos', String(data.acceptedTos))
       formData.append('acceptedGuidelines', String(data.acceptedGuidelines))
       formData.append('confirmedAge', String(data.confirmedAge))
-      formData.append('confirmedPlatonic', String(data.confirmedPlatonic))
 
       const result = await completeProfileAction(
         {
@@ -653,21 +652,6 @@ export function EditProfileForm({ initialValues, categories }: EditProfileFormPr
                     </FormControl>
                     <div>
                       <FormLabel>I confirm that I am at least 18 years old</FormLabel>
-                      <FormMessage />
-                    </div>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="confirmedPlatonic"
-                render={({ field }) => (
-                  <FormItem className="flex items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <div>
-                      <FormLabel>I understand OuterCircl is for platonic connections</FormLabel>
                       <FormMessage />
                     </div>
                   </FormItem>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import type { Activity } from '@/lib/types/activity'
 import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
+import { trackActivityJoined } from '@/lib/analytics/events'
 
 interface JoinOptions {
   message?: string
@@ -49,6 +50,7 @@ export function useParticipation(activityId: string) {
         'Failed to join activity',
       )
       setActivity(data.activity)
+      trackActivityJoined(activityId)
       return data
     },
     [activityId],

@@ -11,6 +11,7 @@ import { ErrorBlock } from '@/components/ui/error-block'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ProtectedHeader } from '@/components/layout/ProtectedHeader'
 import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
+import { hasActivityStarted } from '@/src/utils/activityDateTime'
 
 interface ParticipantSummary {
   id: string
@@ -30,6 +31,7 @@ export default function HostParticipantsPage({ params }: { params: Promise<{ act
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [pendingId, setPendingId] = useState<string | null>(null)
+  const [activityLocked, setActivityLocked] = useState(false)
 
   const fetchRoster = useCallback(async () => {
     try {
@@ -40,7 +42,13 @@ export default function HostParticipantsPage({ params }: { params: Promise<{ act
         { method: 'GET', headers: { 'Content-Type': 'application/json' } },
         'Failed to load participants',
       )
+      const activityData = await fetchJson<{ activityDate: string; startTime: string }>(
+        `/rpc/v1/activities/${activityId}`,
+        { method: 'GET', headers: { 'Content-Type': 'application/json' } },
+        'Failed to load activity',
+      )
       setParticipants(data.participants ?? [])
+      setActivityLocked(hasActivityStarted(activityData.activityDate, activityData.startTime))
     } catch (err) {
       setError(getErrorMessage(err, 'Unknown error loading participants'))
       setParticipants([])
@@ -53,8 +61,12 @@ export default function HostParticipantsPage({ params }: { params: Promise<{ act
     fetchRoster()
   }, [fetchRoster])
 
-  const moderate = async (participantId: string, action: 'approve' | 'reject') => {
+  const moderate = async (participantId: string, action: 'approve' | 'reject' | 'remove') => {
     try {
+      if (activityLocked) {
+        setActionError('This activity is in the Vault and roster changes are locked.')
+        return
+      }
       setPendingId(participantId)
       setActionError(null)
       await fetchJson(
@@ -95,6 +107,11 @@ export default function HostParticipantsPage({ params }: { params: Promise<{ act
           <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <CardHeader className="space-y-3">
               <CardTitle>Participants</CardTitle>
+              {activityLocked ? (
+                <p className="text-sm text-muted-foreground">
+                  This activity is in the Vault. Roster changes are disabled.
+                </p>
+              ) : null}
               {actionError ? <ErrorBlock title="Couldn't update participant" message={actionError} /> : null}
             </CardHeader>
             <CardContent className="space-y-4">
@@ -155,7 +172,7 @@ export default function HostParticipantsPage({ params }: { params: Promise<{ act
                                   <Button
                                     size="sm"
                                     onClick={() => moderate(participant.id, 'approve')}
-                                    disabled={pendingId === participant.id}
+                                    disabled={pendingId === participant.id || activityLocked}
                                   >
                                     Approve
                                   </Button>
@@ -163,11 +180,20 @@ export default function HostParticipantsPage({ params }: { params: Promise<{ act
                                     size="sm"
                                     variant="outline"
                                     onClick={() => moderate(participant.id, 'reject')}
-                                    disabled={pendingId === participant.id}
+                                    disabled={pendingId === participant.id || activityLocked}
                                   >
                                     Reject
                                   </Button>
                                 </>
+                              ) : participant.status === 'confirmed' ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => moderate(participant.id, 'remove')}
+                                  disabled={pendingId === participant.id || activityLocked}
+                                >
+                                  Remove
+                                </Button>
                               ) : (
                                 <span className="text-xs text-muted-foreground">No action</span>
                               )}

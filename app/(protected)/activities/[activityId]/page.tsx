@@ -22,6 +22,7 @@ import { useActivityFeedback } from '@/hooks/useActivityFeedback'
 import { useActivityMessages } from '@/hooks/useActivityMessages'
 import { useParticipation } from '@/hooks/useParticipation'
 import type { ParticipationState } from '@/lib/types/activity'
+import type { UserProfile } from '@/lib/types/profile'
 import { hasActivityStarted } from '@/src/utils/activityDateTime'
 
 const statusCopy: Record<ParticipationState | 'not_joined', string> = {
@@ -29,6 +30,25 @@ const statusCopy: Record<ParticipationState | 'not_joined', string> = {
     pending: 'Awaiting host approval.',
     confirmed: 'You are confirmed for this activity.',
     waitlisted: 'You are currently on the waitlist.',
+}
+
+function restrictionLabel(restriction: 'none' | 'men_only' | 'women_only' | 'other_only') {
+    if (restriction === 'men_only') return 'Men only'
+    if (restriction === 'women_only') return 'Women only'
+    if (restriction === 'other_only') return 'Other only'
+    return 'Open to all genders'
+}
+
+function recurrenceLabel(activity: { recurrence?: { frequency: 'daily' | 'weekly' | 'monthly'; interval: number; weekdays: string[] | null } | null }) {
+    if (!activity.recurrence) return null
+    const every = activity.recurrence.interval > 1 ? `Every ${activity.recurrence.interval}` : 'Every'
+    if (activity.recurrence.frequency === 'weekly' && activity.recurrence.weekdays?.length) {
+        const days = activity.recurrence.weekdays
+            .map((weekday) => weekday.slice(0, 1).toUpperCase() + weekday.slice(1, 3))
+            .join(', ')
+        return `${every} week on ${days}`
+    }
+    return `${every} ${activity.recurrence.frequency}`
 }
 
 export default function ActivityDetailPage({ params }: { params: Promise<{ activityId: string }> }) {
@@ -70,6 +90,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     const [participantRatings, setParticipantRatings] = useState<Record<string, { rating: number | null; comment: string }>>({})
     const [feedbackSubmitError, setFeedbackSubmitError] = useState<string | null>(null)
     const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
+    const [profileGender, setProfileGender] = useState<UserProfile['gender'] | null>(null)
 
     const viewerStatus: ParticipationState | 'not_joined' = activity?.viewerParticipation?.status ?? 'not_joined'
     const isHost = user?.supabaseUserId && activity?.hostId === user.supabaseUserId
@@ -81,8 +102,15 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     const goingCount = Math.max(1, activity?.currentParticipants ?? 0)
     const activityImageUrl = activity?.imageUrl || '/default-activity.svg'
 
-    const canJoin = !isHost && viewerStatus === 'not_joined' && !activityStarted
-    const canCancel = !isHost && ['confirmed', 'pending', 'waitlisted'].includes(viewerStatus)
+    const meetsGenderRestriction = Boolean(
+        !activity ||
+            activity.genderRestriction === 'none' ||
+            (activity.genderRestriction === 'men_only' && profileGender === 'male') ||
+            (activity.genderRestriction === 'women_only' && profileGender === 'female') ||
+            (activity.genderRestriction === 'other_only' && profileGender === 'other'),
+    )
+    const canJoin = !isHost && viewerStatus === 'not_joined' && !activityStarted && meetsGenderRestriction
+    const canCancel = !isHost && !activityStarted && ['confirmed', 'pending', 'waitlisted'].includes(viewerStatus)
 
     const waitlistPosition = activity?.viewerParticipation?.waitlistPosition
     const messageAccessDenied = Boolean(
@@ -92,16 +120,18 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
             ),
     )
     const messageAccessHint =
-        viewerStatus === 'not_joined'
+        activityStarted
+            ? 'This activity is in the Vault and group chat is locked.'
+            : viewerStatus === 'not_joined'
             ? 'Join this activity to view and send group messages.'
             : viewerStatus === 'pending'
                 ? 'Messaging unlocks once the host approves your request.'
                 : viewerStatus === 'waitlisted'
                     ? 'Messaging unlocks once you are moved from the waitlist to confirmed.'
                     : 'Group messaging is currently unavailable.'
-    const showChatLockOverlay = messageAccessDenied
+    const showChatLockOverlay = messageAccessDenied || activityStarted
     const showFeedbackLockOverlay = Boolean(feedbackForm && !feedbackForm.activityEnded)
-    const composerDisabled = !canUseGroupChat || messageAccessDenied
+    const composerDisabled = !canUseGroupChat || messageAccessDenied || activityStarted
 
     useEffect(() => {
         if (!feedbackForm) return
@@ -135,6 +165,30 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
             void refetchMessages()
         }
     }, [activityId, isHost, refetchMessages, viewerStatus])
+
+    useEffect(() => {
+        let cancelled = false
+        async function loadProfile() {
+            if (!user?.supabaseUserId) return
+            try {
+                const profile = await fetch(`/rpc/v1/profile`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                })
+                if (!profile.ok || cancelled) return
+                const payload = (await profile.json()) as UserProfile
+                if (!cancelled) {
+                    setProfileGender(payload.gender)
+                }
+            } catch {
+                // optional hint only
+            }
+        }
+        void loadProfile()
+        return () => {
+            cancelled = true
+        }
+    }, [user?.supabaseUserId])
 
     const handleJoin = async () => {
         try {
@@ -352,6 +406,16 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                                     {goingCount} / {activity.maxParticipants} going (waitlist {activity.waitlistCount})
                                                 </span>
                                             </div>
+                                            <div className="sm:col-span-2">
+                                                <span className="text-foreground">Gender: {restrictionLabel(activity.genderRestriction)}</span>
+                                            </div>
+                                            {activity.recurrence ? (
+                                                <div className="sm:col-span-2">
+                                                    <span className="text-foreground">
+                                                        Recurs: {recurrenceLabel(activity)}
+                                                    </span>
+                                                </div>
+                                            ) : null}
                                         </div>
 
                                         <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
@@ -400,17 +464,25 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                                         <p className="text-sm text-muted-foreground">
                                                             This activity has already started and can no longer be joined.
                                                         </p>
+                                                    ) : !meetsGenderRestriction && viewerStatus === 'not_joined' ? (
+                                                        <p className="text-sm text-muted-foreground">
+                                                            This activity is restricted to {restrictionLabel(activity.genderRestriction).toLowerCase()}.
+                                                        </p>
                                                     ) : null}
                                                 </div>
                                             ) : (
                                                 <div className="rounded-md border border-dashed border-muted-foreground/40 p-3 text-sm text-muted-foreground space-y-2">
-                                                    <p>
-                                                        You are the host. Manage participants on the{' '}
-                                                        <Link href={`/host/activities/${activity.id}/participants`} className="text-primary underline">
-                                                            roster page
-                                                        </Link>
-                                                        .
-                                                    </p>
+                                                    {activityStarted ? (
+                                                        <p>You are the host. This activity is in the Vault and roster changes are locked.</p>
+                                                    ) : (
+                                                        <p>
+                                                            You are the host. Manage participants on the{' '}
+                                                            <Link href={`/host/activities/${activity.id}/participants`} className="text-primary underline">
+                                                                roster page
+                                                            </Link>
+                                                            .
+                                                        </p>
+                                                    )}
                                                     <div className="flex flex-wrap gap-2">
                                                         {activityStarted ? (
                                                             <Button size="sm" variant="outline" disabled>
@@ -487,7 +559,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                                                     variant="ghost"
                                                                     size="sm"
                                                                     onClick={() => pinMessage(message.id, !message.isPinned)}
-                                                                    disabled={!canUseAutomation}
+                                                                    disabled={!canUseAutomation || activityStarted}
                                                                 >
                                                                     {message.isPinned ? 'Unpin' : 'Pin'}
                                                                 </Button>
@@ -497,6 +569,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                                                     variant="ghost"
                                                                     size="sm"
                                                                     onClick={() => handleReport(message.id)}
+                                                                    disabled={activityStarted}
                                                                 >
                                                                     Report
                                                                 </Button>
@@ -565,9 +638,13 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                                     <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
                                                         <Lock className="h-5 w-5 text-foreground" />
                                                     </div>
-                                                    <p className="text-sm font-semibold text-foreground">Group chat unlocks after you join</p>
+                                                    <p className="text-sm font-semibold text-foreground">
+                                                        {activityStarted ? 'Group chat is locked for this Vault activity' : 'Group chat unlocks after you join'}
+                                                    </p>
                                                     <p className="mt-1 text-sm text-muted-foreground">
-                                                        Join this activity to view and send group messages.
+                                                        {activityStarted
+                                                            ? 'Past activities are read-only except post-activity feedback.'
+                                                            : 'Join this activity to view and send group messages.'}
                                                     </p>
                                                 </div>
                                             </div>

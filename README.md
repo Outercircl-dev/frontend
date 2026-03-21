@@ -34,6 +34,15 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 - Premium group management is under `/activities/groups` and proxies to `/rpc/v1/activities/groups`.
 - Recurring schedules are captured via the activity form and sent to `/rpc/v1/activities` as `recurrence`.
 
+## Analytics
+
+- Web analytics is implemented with PostHog.
+- Configure these frontend environment variables:
+  - `NEXT_PUBLIC_POSTHOG_KEY=<your posthog project api key>`
+  - `NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com`
+- For EU projects, use `https://eu.i.posthog.com` as the host.
+- If PostHog env vars are missing, analytics initialization is skipped safely.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
