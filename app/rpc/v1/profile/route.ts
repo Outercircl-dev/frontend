@@ -32,8 +32,14 @@ async function resolveSessionToken() {
 export async function GET() {
     try {
         const { token, error } = await resolveSessionToken()
-        if (error || !token) {
+        if (error) {
             return error
+        }
+        if (!token) {
+            return NextResponse.json(
+                { error: 'Unauthorized', message: 'No valid session found' },
+                { status: 401 }
+            )
         }
 
         const controller = new AbortController()
@@ -77,8 +83,14 @@ export async function GET() {
 export async function POST(request: NextRequest) {
     try {
         const { token, error } = await resolveSessionToken()
-        if (error || !token) {
+        if (error) {
             return error
+        }
+        if (!token) {
+            return NextResponse.json(
+                { error: 'Unauthorized', message: 'No valid session found' },
+                { status: 401 }
+            )
         }
 
         const body = await request.json()
