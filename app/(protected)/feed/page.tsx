@@ -13,6 +13,7 @@ import { AdSlot } from '@/components/membership/AdSlot'
 import { ErrorBlock } from '@/components/ui/error-block'
 import { ProtectedHeader } from '@/components/layout/ProtectedHeader'
 import { useAuthState } from '@/hooks/useAuthState'
+import { useViewerGender } from '@/hooks/useViewerGender'
 import type { ActivitiesResponse, Activity } from '@/lib/types/activity'
 import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
 import { hasActivityStarted } from '@/src/utils/activityDateTime'
@@ -34,6 +35,7 @@ export default function FeedPage() {
   const [category, setCategory] = useState<string>('all')
   const [sort, setSort] = useState<'latest' | 'oldest'>('latest')
   const { user } = useAuthState()
+  const viewerGender = useViewerGender(user?.supabaseUserId)
   const showAds = Boolean(user?.tierRules?.ads?.showsAds)
 
   useEffect(() => {
@@ -291,6 +293,7 @@ export default function FeedPage() {
                       <ActivityCard
                         activity={activity}
                         viewerId={user?.supabaseUserId}
+                        viewerGender={viewerGender}
                         clickHref={`/activities/${activity.id}`}
                         onActivityUpdated={handleActivityUpdated}
                       />
@@ -313,6 +316,7 @@ export default function FeedPage() {
                     key={activity.id}
                     activity={activity}
                     viewerId={user?.supabaseUserId}
+                    viewerGender={viewerGender}
                     clickHref={`/activities/${activity.id}`}
                     onActivityUpdated={handleActivityUpdated}
                   />

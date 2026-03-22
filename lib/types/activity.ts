@@ -51,9 +51,8 @@ export interface Activity {
   } | null
   recurrence?: {
     id: string
-    frequency: 'daily' | 'weekly' | 'monthly'
+    frequency: 'daily' | 'weekly'
     interval: number
-    endsOn: string | null
     occurrences: number | null
     weekdays: RecurrenceWeekday[] | null
   } | null

@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Camera, Check, Loader2, X } from 'lucide-react'
 import { useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { FormProvider, useForm, type Resolver } from 'react-hook-form'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 import { completeProfileAction } from '@/actions/profile/complete-profile-action'
@@ -621,7 +622,17 @@ export function EditProfileForm({ initialValues, categories }: EditProfileFormPr
                       <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
                     <div>
-                      <FormLabel>I agree to the Terms of Service</FormLabel>
+                      <FormLabel>
+                        I agree to the{' '}
+                        <Link
+                          href="/terms-and-conditions"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          Terms of Service
+                        </Link>
+                      </FormLabel>
                       <FormMessage />
                     </div>
                   </FormItem>
@@ -636,7 +647,17 @@ export function EditProfileForm({ initialValues, categories }: EditProfileFormPr
                       <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
                     <div>
-                      <FormLabel>I agree to the Community Guidelines</FormLabel>
+                      <FormLabel>
+                        I agree to the{' '}
+                        <Link
+                          href="/privacy-policy"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          Privacy Policy
+                        </Link>
+                      </FormLabel>
                       <FormMessage />
                     </div>
                   </FormItem>
