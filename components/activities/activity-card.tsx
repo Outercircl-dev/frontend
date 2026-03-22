@@ -10,7 +10,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { fetchJson } from '@/lib/api/fetch-json'
+import { genderRestrictionReason, meetsGenderRestriction } from '@/lib/activity-gender-restriction'
 import type { Activity } from '@/lib/types/activity'
+import type { Gender } from '@/lib/types/profile'
 import { hasActivityStarted } from '@/src/utils/activityDateTime'
 
 function formatDate(dateString: string) {
@@ -44,24 +46,25 @@ function restrictionLabel(restriction: 'none' | 'men_only' | 'women_only' | 'oth
 
 function recurrenceLabel(activity: Activity) {
   if (!activity.recurrence) return null
-  const every = activity.recurrence.interval > 1 ? `Every ${activity.recurrence.interval}` : 'Every'
   if (activity.recurrence.frequency === 'weekly' && activity.recurrence.weekdays?.length) {
     const days = activity.recurrence.weekdays
       .map((weekday) => weekday.slice(0, 1).toUpperCase() + weekday.slice(1, 3))
       .join(', ')
-    return `${every} week (${days})`
+    return `Weekly on ${days}`
   }
-  return `${every} ${activity.recurrence.frequency}`
+  return 'Daily'
 }
 
 export function ActivityCard({
   activity,
   viewerId,
+  viewerGender,
   clickHref,
   onActivityUpdated,
 }: {
   activity: Activity
   viewerId?: string | null
+  viewerGender?: Gender | null
   clickHref?: string
   onActivityUpdated?: (activity: Activity) => void
 }) {
@@ -81,12 +84,18 @@ export function ActivityCard({
   const activityImageUrl = activity.imageUrl || '/default-activity.svg'
   const hostLabel = activity.hostUsername || activity.hostName || activity.hostId.slice(0, 8)
   const targetHref = clickHref ?? `/activities/${activity.id}`
+  const canJoinByGender = meetsGenderRestriction(activity.genderRestriction, viewerGender ?? null)
+  const genderJoinReason =
+    participationStatus === 'not_joined' && !isHost && !canJoinByGender
+      ? genderRestrictionReason(activity.genderRestriction)
+      : null
   const canJoin =
     Boolean(viewerId) &&
     !isHost &&
     activity.status === 'published' &&
     !hasStarted &&
-    participationStatus === 'not_joined'
+    participationStatus === 'not_joined' &&
+    canJoinByGender
   const joinButtonLabel = useMemo(() => {
     if (isHost) return 'Host'
     if (participationStatus === 'confirmed') return 'Joined'
@@ -246,6 +255,7 @@ export function ActivityCard({
             {isJoining ? 'Joining...' : joinButtonLabel}
           </Button>
         </div>
+        {genderJoinReason ? <p className="text-xs text-amber-700">{genderJoinReason}</p> : null}
       </CardContent>
     </Card>
   )

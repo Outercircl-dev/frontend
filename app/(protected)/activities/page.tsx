@@ -15,6 +15,7 @@ import { UpgradeHint } from '@/components/membership/UpgradeHint'
 import { ErrorBlock } from '@/components/ui/error-block'
 import { ProtectedHeader } from '@/components/layout/ProtectedHeader'
 import { useAuthState } from '@/hooks/useAuthState'
+import { useViewerGender } from '@/hooks/useViewerGender'
 import type { ActivitiesResponse, Activity } from '@/lib/types/activity'
 import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
 import { hasActivityStarted } from '@/src/utils/activityDateTime'
@@ -30,6 +31,7 @@ export default function ActivitiesPage() {
   const [query, setQuery] = useState('')
   const [pastActivities, setPastActivities] = useState<Activity[]>([])
   const { user } = useAuthState()
+  const viewerGender = useViewerGender(user?.supabaseUserId)
   const showAds = Boolean(user?.tierRules?.ads?.showsAds)
   const groupsEnabled = user?.tierRules?.groups?.enabled ?? false
 
@@ -249,6 +251,7 @@ export default function ActivitiesPage() {
                       key={`mine-${activity.id}`}
                       activity={activity}
                       viewerId={user?.supabaseUserId}
+                      viewerGender={viewerGender}
                       onActivityUpdated={handleActivityUpdated}
                     />
                   ))}
@@ -278,6 +281,7 @@ export default function ActivitiesPage() {
                       key={`discover-${activity.id}`}
                       activity={activity}
                       viewerId={user?.supabaseUserId}
+                      viewerGender={viewerGender}
                       onActivityUpdated={handleActivityUpdated}
                     />
                   ))}
@@ -306,6 +310,7 @@ export default function ActivitiesPage() {
                       key={`old-${activity.id}`}
                       activity={activity}
                       viewerId={user?.supabaseUserId}
+                      viewerGender={viewerGender}
                       onActivityUpdated={handleActivityUpdated}
                     />
                   ))}

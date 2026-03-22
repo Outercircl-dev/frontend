@@ -34,14 +34,14 @@ const GUIDELINES = [
     label: 'I agree to the Terms of Service',
     icon: AlertCircle,
     description: 'Please read and accept our terms before using the platform.',
-    link: '/terms',
+    link: '/terms-and-conditions',
   },
   {
     id: 'acceptedGuidelines',
-    label: 'I agree to the Community Guidelines',
+    label: 'I agree to the Privacy Policy',
     icon: Users,
-    description: 'Be respectful, inclusive, and help keep our community safe.',
-    link: '/guidelines',
+    description: 'Please review how your data is collected, used, and protected.',
+    link: '/privacy-policy',
   },
 ] as const
 

@@ -27,6 +27,7 @@ import { trackActivityCreated } from '@/lib/analytics/events'
 import { ErrorBlock } from '@/components/ui/error-block'
 import { ACTIVITY_CATEGORY_OPTIONS } from '@/lib/activity-categories'
 import type { ActivityGenderRestriction, RecurrenceWeekday } from '@/lib/types/activity'
+import { RecurrenceCalendarPreview } from '@/components/activities/recurrence-calendar-preview'
 
 const WEEKDAYS: Array<{ value: RecurrenceWeekday; label: string }> = [
   { value: 'monday', label: 'Mon' },
@@ -61,9 +62,7 @@ export default function CreateActivityPage() {
   const [groupId, setGroupId] = useState<string | undefined>(undefined)
 
   const [recurrenceEnabled, setRecurrenceEnabled] = useState(false)
-  const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>('weekly')
-  const [interval, setInterval] = useState('1')
-  const [endsOn, setEndsOn] = useState('')
+  const [frequency, setFrequency] = useState<'daily' | 'weekly'>('weekly')
   const [occurrences, setOccurrences] = useState('')
   const [weeklyDays, setWeeklyDays] = useState<RecurrenceWeekday[]>(['monday'])
   const [genderRestriction, setGenderRestriction] = useState<ActivityGenderRestriction>('none')
@@ -164,6 +163,13 @@ export default function CreateActivityPage() {
       endTime &&
       maxParticipants,
   ) && !semanticValidationError
+  const recurrenceValidationError =
+    recurrenceEnabled && !occurrences
+      ? 'Occurrences is required for recurring activities.'
+      : recurrenceEnabled && frequency === 'weekly' && weeklyDays.length === 0
+        ? 'Select at least one weekday for weekly recurrence.'
+        : null
+  const canSubmitWithRecurrence = canSubmit && !recurrenceValidationError
 
   const handleSubmit = async () => {
     try {
@@ -197,9 +203,7 @@ export default function CreateActivityPage() {
         recurrence: recurrenceEnabled
           ? {
               frequency,
-              interval: Number(interval || 1),
-              endsOn: endsOn || undefined,
-              occurrences: occurrences ? Number(occurrences) : undefined,
+              occurrences: Number(occurrences),
               weekdays: frequency === 'weekly' ? weeklyDays : undefined,
             }
           : undefined,
@@ -235,7 +239,7 @@ export default function CreateActivityPage() {
           </Link>
         </Button>
         <div className="flex flex-col items-end gap-2">
-          <Button onClick={handleSubmit} disabled={!canSubmit || isSubmitting} className="gap-2">
+          <Button onClick={handleSubmit} disabled={!canSubmitWithRecurrence || isSubmitting} className="gap-2">
             <Save className="h-4 w-4" />
             Create activity
           </Button>
@@ -500,20 +504,19 @@ export default function CreateActivityPage() {
               </Button>
             </div>
             {recurrenceEnabled ? (
-              <div className="grid gap-3 md:grid-cols-4">
-                <Select value={frequency} onValueChange={(v) => setFrequency(v as 'daily' | 'weekly' | 'monthly')}>
+              <div className="grid gap-3 md:grid-cols-2">
+                <Select value={frequency} onValueChange={(v) => setFrequency(v as 'daily' | 'weekly')}>
                   <SelectTrigger>
                     <SelectValue placeholder="Frequency" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="daily">Daily</SelectItem>
                     <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
                   </SelectContent>
                 </Select>
-                <Input value={interval} onChange={(e) => setInterval(e.target.value)} placeholder="Interval" />
-                <Input type="date" value={endsOn} onChange={(e) => setEndsOn(e.target.value)} />
                 <Input
+                  type="number"
+                  min={1}
                   value={occurrences}
                   onChange={(e) => setOccurrences(e.target.value)}
                   placeholder="Occurrences"
@@ -553,10 +556,26 @@ export default function CreateActivityPage() {
                 Enable recurring schedule to repeat this activity automatically.
               </p>
             ) : null}
+            {recurrenceValidationError ? (
+              <p className="text-xs text-destructive">{recurrenceValidationError}</p>
+            ) : null}
+            <RecurrenceCalendarPreview
+              recurrenceEnabled={recurrenceEnabled}
+              activityDate={activityDate}
+              frequency={frequency}
+              occurrences={occurrences}
+              weeklyDays={weeklyDays}
+            />
           </div>
           {error && !locationValidationError && !scheduleValidationError ? (
             <ErrorBlock title="Couldn't create activity" message={error} />
           ) : null}
+          <div className="flex justify-end border-t pt-4">
+            <Button onClick={handleSubmit} disabled={!canSubmitWithRecurrence || isSubmitting} className="gap-2">
+              <Save className="h-4 w-4" />
+              Create activity
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

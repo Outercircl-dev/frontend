@@ -239,3 +239,38 @@ test('submits valid future payload and redirects to activity details', async ({ 
   expect(createEndpointCalled).toBe(true)
   await page.waitForURL(/\/(activities\/activity-123|login)/)
 })
+
+test('submits weekly recurrence payload without interval and shows preview', async ({ page }) => {
+  await mockAuthenticatedUser(page)
+  let createEndpointCalled = false
+
+  await page.route('**/rpc/v1/activities', async (route) => {
+    if (route.request().method() !== 'POST') {
+      await route.continue()
+      return
+    }
+
+    createEndpointCalled = true
+    const payload = route.request().postDataJSON() as {
+      recurrence?: { frequency: string; occurrences: number; interval?: number; weekdays?: string[] }
+    }
+    expect(payload.recurrence?.frequency).toBe('weekly')
+    expect(payload.recurrence?.occurrences).toBe(14)
+    expect(payload.recurrence?.interval).toBeUndefined()
+    expect(payload.recurrence?.weekdays).toContain('monday')
+
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: 'activity-123' }),
+    })
+  })
+
+  await page.goto('/e2e/activity-create')
+  await fillRequiredActivityFields(page, '221B Baker Street')
+  await page.getByRole('button', { name: 'Enable' }).click()
+  await page.getByPlaceholder('Occurrences').fill('14')
+  await expect(page.getByText('Showing 14 scheduled events.')).toBeVisible()
+  await page.getByRole('button', { name: 'Create activity' }).click()
+  expect(createEndpointCalled).toBe(true)
+})
