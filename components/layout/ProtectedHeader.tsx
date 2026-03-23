@@ -78,16 +78,29 @@ export function ProtectedHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-      <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 py-2 sm:px-6 lg:px-8">
-        <Link href="/feed" className="flex items-center gap-3">
-          <Image src="/logo.png" alt="OuterCircl" width={140} height={40} className="h-9 w-auto" priority />
+      <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-2 px-4 py-2 sm:gap-3 sm:px-6 lg:px-8">
+        <Link href="/feed" className="flex min-w-0 items-center">
+          <Image
+            src="/logo.png"
+            alt="OuterCircl"
+            width={140}
+            height={40}
+            className="h-8 w-auto max-w-[120px] sm:h-9 sm:max-w-none"
+            priority
+          />
         </Link>
 
-        <div className="flex items-center gap-2">
-          <Button asChild size="sm" className="h-11 rounded-full px-4 text-sm font-semibold shadow-sm">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <Button
+            asChild
+            size="sm"
+            className="h-11 rounded-full px-3 text-sm font-semibold shadow-sm sm:px-4"
+            aria-label="Create activity"
+          >
             <Link href="/activities/new" className="inline-flex items-center gap-2">
               <Plus className="h-4 w-4" />
-              Create activity
+              <span className="sm:hidden">Create</span>
+              <span className="hidden sm:inline">Create activity</span>
             </Link>
           </Button>
 
