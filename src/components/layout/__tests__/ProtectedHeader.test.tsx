@@ -1,8 +1,8 @@
-// Copyright (c) 2026 Outer Circle. All rights reserved.
-
 /**
  * @jest-environment jsdom
  */
+
+// Copyright (c) 2026 Outer Circle. All rights reserved.
 
 import { render, screen } from '@testing-library/react'
 
