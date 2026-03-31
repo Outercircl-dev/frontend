@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 'use client'
 
 import posthog from 'posthog-js'

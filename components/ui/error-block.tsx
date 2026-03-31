@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 

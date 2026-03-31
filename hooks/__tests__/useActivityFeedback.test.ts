@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 /**
  * Unit tests for feedback endpoints consumed by useActivityFeedback.
  */

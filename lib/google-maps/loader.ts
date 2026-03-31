@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 const GOOGLE_MAPS_API_SRC = 'https://maps.googleapis.com/maps/api/js'
 const SCRIPT_ID = 'outercircl-google-maps-script'
 

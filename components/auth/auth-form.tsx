@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 'use client'
 
 import { useActionState, useEffect, useRef, useState } from 'react'
@@ -86,7 +88,7 @@ export function AuthForm() {
                             name="email"
                             type="email"
                             autoComplete="email"
-                            placeholder="you@outercircl.com"
+                            placeholder="you@outercircle.com"
                             required
                         />
                     </div>

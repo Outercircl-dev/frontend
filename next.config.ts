@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {

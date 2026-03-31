@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 'use client';
 
 import type { HTMLAttributes } from 'react';

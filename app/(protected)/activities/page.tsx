@@ -1,8 +1,10 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 'use client'
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarDays, ChevronLeft, ChevronRight, MapPin, Search } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 
 import { ActivityCard } from '@/components/activities/activity-card'
 import { Badge } from '@/components/ui/badge'
@@ -122,12 +124,6 @@ export default function ActivitiesPage() {
     })
   }, [allItems, user])
 
-  const upcomingActivities = useMemo(() => {
-    if (!user?.supabaseUserId) return allItems
-    const mine = new Set(myActivities.map((activity) => activity.id))
-    return allItems.filter((activity) => !mine.has(activity.id))
-  }, [allItems, myActivities, user])
-
   const isOldActivity = useCallback((activity: Activity) => {
     if (activity.status === 'completed' || activity.status === 'cancelled') return true
     return hasActivityStarted(activity.activityDate, activity.startTime)
@@ -136,11 +132,6 @@ export default function ActivitiesPage() {
   const currentActivities = useMemo(
     () => myActivities.filter((activity) => !isOldActivity(activity)),
     [myActivities, isOldActivity],
-  )
-
-  const discoverActivities = useMemo(
-    () => upcomingActivities.filter((activity) => !isOldActivity(activity)),
-    [upcomingActivities, isOldActivity],
   )
 
   const oldActivities = useMemo(() => {
@@ -175,7 +166,7 @@ export default function ActivitiesPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <h1 className="text-3xl font-semibold tracking-tight">My Circl</h1>
-            <p className="text-sm text-muted-foreground">Everything you host or are attending, plus what’s trending.</p>
+            <p className="text-sm text-muted-foreground">Everything you host or are attending.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex flex-col items-start gap-1">
@@ -249,36 +240,6 @@ export default function ActivitiesPage() {
                   {currentActivities.map((activity) => (
                     <ActivityCard
                       key={`mine-${activity.id}`}
-                      activity={activity}
-                      viewerId={user?.supabaseUserId}
-                      viewerGender={viewerGender}
-                      onActivityUpdated={handleActivityUpdated}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section className="space-y-3 rounded-xl border bg-background/80 p-4 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-lg font-semibold">Discover</h2>
-                  <p className="text-sm text-muted-foreground">Find upcoming activities you can still join.</p>
-                </div>
-                <span className="text-sm text-muted-foreground">{discoverActivities.length} results</span>
-              </div>
-              {discoverActivities.length === 0 ? (
-                <Card className="border-dashed">
-                  <CardContent className="flex flex-col items-center justify-center gap-2 py-6 text-center text-sm text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    Nothing new matches your search right now.
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {discoverActivities.map((activity) => (
-                    <ActivityCard
-                      key={`discover-${activity.id}`}
                       activity={activity}
                       viewerId={user?.supabaseUserId}
                       viewerGender={viewerGender}

@@ -1,15 +1,22 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react'
 
-import { CalendarDays, Clock, Globe, Lock, MapPin, Users } from 'lucide-react'
+import { CalendarDays, Clock, Globe, Lock, MapPin, UserCircle2, Users } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { fetchJson } from '@/lib/api/fetch-json'
+import {
+  DEFAULT_ACTIVITY_IMAGE,
+  getActivityImageForCategory,
+  getCategoryImageAttribution,
+} from '@/lib/activity-categories'
 import { genderRestrictionReason, meetsGenderRestriction } from '@/lib/activity-gender-restriction'
 import type { Activity } from '@/lib/types/activity'
 import type { Gender } from '@/lib/types/profile'
@@ -81,8 +88,11 @@ export function ActivityCard({
   const isHost = Boolean(viewerId && activity.hostId === viewerId)
   const hasStarted = hasActivityStarted(activity.activityDate, activity.startTime)
   const participationStatus = activity.viewerParticipation?.status ?? 'not_joined'
-  const activityImageUrl = activity.imageUrl || '/default-activity.svg'
-  const hostLabel = activity.hostUsername || activity.hostName || activity.hostId.slice(0, 8)
+  const resolvedImage = getActivityImageForCategory(activity.category, activity.imageUrl)
+  const attribution = getCategoryImageAttribution(resolvedImage.category)
+  const [activityImageUrl, setActivityImageUrl] = useState(resolvedImage.src)
+  const [showDefaultAttribution, setShowDefaultAttribution] = useState(resolvedImage.isDefault)
+  const hostLabel = activity.hostName || activity.hostUsername || activity.hostId.slice(0, 8)
   const targetHref = clickHref ?? `/activities/${activity.id}`
   const canJoinByGender = meetsGenderRestriction(activity.genderRestriction, viewerGender ?? null)
   const genderJoinReason =
@@ -103,6 +113,11 @@ export function ActivityCard({
     if (participationStatus === 'waitlisted') return 'Waitlisted'
     return 'Join Activity'
   }, [isHost, participationStatus])
+
+  useEffect(() => {
+    setActivityImageUrl(resolvedImage.src)
+    setShowDefaultAttribution(resolvedImage.isDefault)
+  }, [resolvedImage.isDefault, resolvedImage.src])
 
   const handleCardClick = () => {
     router.push(targetHref)
@@ -154,7 +169,35 @@ export function ActivityCard({
           src={activityImageUrl}
           alt={`${activity.title} cover image`}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+          onError={() => {
+            if (activityImageUrl !== DEFAULT_ACTIVITY_IMAGE) {
+              setActivityImageUrl(DEFAULT_ACTIVITY_IMAGE)
+            }
+            setShowDefaultAttribution(false)
+          }}
         />
+        {showDefaultAttribution && attribution ? (
+          <p className="px-3 py-1 text-[11px] text-muted-foreground/80">
+            Photo by{' '}
+            <a
+              href={attribution.photographerUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="underline-offset-2 hover:underline"
+            >
+              {attribution.photographerName}
+            </a>{' '}
+            on{' '}
+            <a
+              href={attribution.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="underline-offset-2 hover:underline"
+            >
+              {attribution.sourceName}
+            </a>
+          </p>
+        ) : null}
       </div>
       <CardHeader className="space-y-3">
         <div className="flex items-start justify-between gap-3">
@@ -185,7 +228,8 @@ export function ActivityCard({
           <Badge variant="outline" className="text-xs">
             {restrictionLabel(activity.genderRestriction)}
           </Badge>
-          <Badge variant="outline" className="text-xs">
+          <Badge variant="outline" className="ml-1 gap-1 border-primary/40 bg-primary/10 text-xs text-primary">
+            <UserCircle2 className="h-3.5 w-3.5" />
             Host {hostLabel}
           </Badge>
         </div>

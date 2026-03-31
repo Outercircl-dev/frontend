@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import type { OnboardingFormData, UserProfile } from '@/lib/types/profile'
 import { defaultProfileValues } from '@/lib/validations/profile'
 

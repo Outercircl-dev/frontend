@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 function toActivityStartDate(activityDate: string, startTime: string): Date | null {
   const date = new Date(activityDate)
   if (Number.isNaN(date.getTime())) {

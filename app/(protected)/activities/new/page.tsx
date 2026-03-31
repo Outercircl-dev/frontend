@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 'use client'
 
 import Link from 'next/link'
@@ -28,6 +30,8 @@ import { ErrorBlock } from '@/components/ui/error-block'
 import { ACTIVITY_CATEGORY_OPTIONS } from '@/lib/activity-categories'
 import type { ActivityGenderRestriction, RecurrenceWeekday } from '@/lib/types/activity'
 import { RecurrenceCalendarPreview } from '@/components/activities/recurrence-calendar-preview'
+
+const MAX_ACTIVITY_PARTICIPANTS = 4
 
 const WEEKDAYS: Array<{ value: RecurrenceWeekday; label: string }> = [
   { value: 'monday', label: 'Mon' },
@@ -180,7 +184,7 @@ export default function CreateActivityPage() {
       setIsSubmitting(true)
       setError(null)
 
-      const numericMaxParticipants = Number(maxParticipants)
+      const numericMaxParticipants = Math.min(Number(maxParticipants), MAX_ACTIVITY_PARTICIPANTS)
 
       const payload = {
         title,
@@ -427,6 +431,7 @@ export default function CreateActivityPage() {
               <Input
                 type="number"
                 min={1}
+                max={MAX_ACTIVITY_PARTICIPANTS}
                 value={maxParticipants}
                 onChange={(e) => {
                   const next = e.target.value
@@ -436,9 +441,13 @@ export default function CreateActivityPage() {
                   }
                   const numeric = Number(next)
                   if (Number.isNaN(numeric)) return
+                  if (numeric > MAX_ACTIVITY_PARTICIPANTS) {
+                    setMaxParticipants(String(MAX_ACTIVITY_PARTICIPANTS))
+                    return
+                  }
                   setMaxParticipants(next)
                 }}
-                placeholder="Max participants"
+                placeholder={`Max participants (up to ${MAX_ACTIVITY_PARTICIPANTS})`}
               />
             </div>
             <Select value={isPublic ? 'public' : 'private'} onValueChange={(v) => setIsPublic(v === 'public')}>

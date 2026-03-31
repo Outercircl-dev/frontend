@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 'use client'
 
 import { Button } from '@/components/ui/button'

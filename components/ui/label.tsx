@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import * as React from 'react'
 import * as LabelPrimitive from '@radix-ui/react-label'
 

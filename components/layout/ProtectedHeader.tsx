@@ -1,14 +1,15 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 'use client'
 
 import Image from 'next/image'
 import Link from 'next/link'
 import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, CalendarCheck2, LogOut, Plus, Settings, User2 } from 'lucide-react'
+import { CalendarCheck2, LogOut, Plus, Settings, User2 } from 'lucide-react'
 
-import { openNotificationsDrawer } from '@/components/notifications/drawer-events'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -20,7 +21,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuthState } from '@/hooks/useAuthState'
-import { useNotifications } from '@/hooks/useNotifications'
 
 function getInitials(displayName: string | null | undefined, email: string | null | undefined): string {
   const fromName = (displayName ?? '')
@@ -43,10 +43,8 @@ export function ProtectedHeader() {
   const router = useRouter()
   const [isSigningOut, setIsSigningOut] = useState(false)
   const { user } = useAuthState()
-  const { unreadCount } = useNotifications()
   const displayName = user?.displayName?.trim() || null
   const userLabel = displayName ?? user?.email ?? 'My account'
-  const unreadLabel = unreadCount > 99 ? '99+' : String(unreadCount)
 
   const handleSignOut = useCallback(async () => {
     if (isSigningOut) {
@@ -104,6 +102,7 @@ export function ProtectedHeader() {
             </Link>
           </Button>
 
+          <NotificationBell />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-11 w-11 rounded-full p-0" aria-label="Open account menu">
@@ -113,11 +112,6 @@ export function ProtectedHeader() {
                     {getInitials(displayName, user?.email)}
                   </AvatarFallback>
                 </Avatar>
-                {unreadCount > 0 ? (
-                  <Badge className="pointer-events-none absolute -right-0.5 -top-0.5 min-w-5 justify-center px-1 text-[10px]">
-                    {unreadLabel}
-                  </Badge>
-                ) : null}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
@@ -139,10 +133,6 @@ export function ProtectedHeader() {
                     <CalendarCheck2 className="h-4 w-4" />
                     My Circl
                   </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => openNotificationsDrawer()}>
-                  <Bell className="h-4 w-4" />
-                  Notifications
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/settings" className="cursor-pointer">

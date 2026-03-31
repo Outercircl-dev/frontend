@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 /**
  * Utility function to build API endpoint URLs
  * 

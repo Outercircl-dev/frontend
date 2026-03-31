@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import type { Metadata } from 'next'
 import { LegalDocumentPage } from '@/components/legal/LegalDocumentPage'
 
@@ -18,16 +20,16 @@ This Privacy Notice for Outercircl Limited ('we', 'us', or 'our') describes how 
 This Privacy Notice is issued in accordance with Article 13 and 14 of the General Data Protection Regulation (EU) 2016/679 ('GDPR'), the Irish Data Protection Act 2018, and the Irish ePrivacy Regulations 2011 (S.I. No. 336 of 2011). As an organisation based in Ireland, Outercircl Limited is subject to the supervision of the Data Protection Commission ('DPC') as the competent supervisory authority.
 
 
-Data Protection Officer (DPO): Outercircl Limited has not designated a formal Data Protection Officer at this stage, as we do not meet the mandatory thresholds under Article 37 GDPR for DPO appointment. Queries relating to data protection should be directed to privacy@outercircl.com.
+Data Protection Officer (DPO): Outercircl Limited has not designated a formal Data Protection Officer at this stage, as we do not meet the mandatory thresholds under Article 37 GDPR for DPO appointment. Queries relating to data protection should be directed to privacy@outercircle.com.
 
 
-* Visit our website at https://outercircl.com or any website of ours that links to this Privacy Notice
+* Visit our website at https://outercircle.com or any website of ours that links to this Privacy Notice
 * Download and use our mobile application (Outercircl), or any other application of ours that links to this Privacy Notice
 * Use Outercircl — a social wellness platform that connects users to in-person, interest-based activities and events also known as Circls. All activities and events are user-generated and are not affiliated with Outercircl unless clearly stated otherwise as an Outercircl-hosted activity or event
 * Engage with us in other related ways, including any marketing or events
 
 
-Questions or concerns? Reading this Privacy Notice will help you understand your privacy rights and choices. We are responsible for making decisions about how your personal information is processed. If you do not agree with our policies and practices, please do not use our Services. If you still have any questions or concerns, please contact us at privacy@outercircl.com.
+Questions or concerns? Reading this Privacy Notice will help you understand your privacy rights and choices. We are responsible for making decisions about how your personal information is processed. If you do not agree with our policies and practices, please do not use our Services. If you still have any questions or concerns, please contact us at privacy@outercircle.com.
 
 
 SUMMARY OF KEY POINTS
@@ -52,7 +54,7 @@ How do we keep your information safe? We have appropriate organisational and tec
 What are your rights? Depending on where you are located, the applicable privacy law may mean you have certain rights regarding your personal information. See Section 13 for full details.
 
 
-How do you exercise your rights? The easiest way is by submitting a data subject access request or by contacting us directly at privacy@outercircl.com. We will consider and act upon any request in accordance with applicable data protection laws.
+How do you exercise your rights? The easiest way is by submitting a data subject access request or by contacting us directly at privacy@outercircle.com. We will consider and act upon any request in accordance with applicable data protection laws.
 
 
 TABLE OF CONTENTS
@@ -242,7 +244,7 @@ Cookie Consent Requirements. In line with DPC guidance and Irish ePrivacy Regula
 * Non-essential cookies will not be placed on your device until you have given valid consent
 
 
-Specific information about how we use such technologies and how you can refuse certain cookies is set out in our Cookie Policy, available at outercircl.com/cookies.
+Specific information about how we use such technologies and how you can refuse certain cookies is set out in our Cookie Policy, available at outercircle.com/cookies.
 
 
 Google Analytics
@@ -349,7 +351,7 @@ Our servers and those of our third-party processors are primarily located within
 EU data residency: Our analytics provider PostHog processes and stores data exclusively within the EU (Frankfurt, Germany), and no data transfer outside the EEA occurs in connection with PostHog.
 
 
-You may request a copy of the transfer safeguards we rely on by contacting us at privacy@outercircl.com.
+You may request a copy of the transfer safeguards we rely on by contacting us at privacy@outercircle.com.
 
 
 10. HOW LONG DO WE KEEP YOUR INFORMATION?
@@ -398,7 +400,7 @@ Under the Irish Data Protection Act 2018 and Article 8 of the GDPR, the digital 
 Our Services are not directed at children under the age of 16. We do not knowingly collect, solicit data from, or market to children under 16 years of age, nor do we knowingly sell such personal information. By using the Services, you represent that you are at least 16 years of age.
 
 
-If we learn that personal information from users less than 16 years of age has been collected without verified parental consent, we will deactivate the account and take reasonable measures to promptly delete such data from our records. If you become aware of any data we may have collected from children under age 16, please contact us at info@outercircl.com.
+If we learn that personal information from users less than 16 years of age has been collected without verified parental consent, we will deactivate the account and take reasonable measures to promptly delete such data from our records. If you become aware of any data we may have collected from children under age 16, please contact us at info@outercircle.com.
 
 
 Note: Under the Data Protection Act 2018, it is an offence to process the personal data of a child under 18 for the purposes of direct marketing, profiling, or micro-targeting. Outercircl does not process the personal data of anyone known to be under 18 for any such purpose.
@@ -459,7 +461,7 @@ Cookies and Similar Technologies
 Most web browsers are set to accept cookies by default. If you prefer, you can usually choose to set your browser to remove or reject cookies. If you choose to remove or reject cookies, this could affect certain features or services of our Services. You may also opt out of interest-based advertising by advertisers on our Services by visiting aboutads.info/choices.
 
 
-If you have questions or comments about your privacy rights, you may email us at privacy@outercircl.com.
+If you have questions or comments about your privacy rights, you may email us at privacy@outercircle.com.
 
 
 14. CONTROLS FOR DO-NOT-TRACK FEATURES
@@ -473,11 +475,11 @@ In Short: Yes, we will update this notice as necessary to stay compliant with re
 We may update this Privacy Notice from time to time. The updated version will be indicated by an updated 'Revised' date at the top of this Privacy Notice. If we make material changes to this Privacy Notice, we may notify you either by prominently posting a notice of such changes or by directly sending you a notification. We encourage you to review this Privacy Notice frequently to be informed of how we are protecting your information.
 
 
-The current version of this Privacy Notice is always available at outercircl.com/privacy.
+The current version of this Privacy Notice is always available at outercircle.com/privacy.
 
 
 16. HOW CAN YOU CONTACT US ABOUT THIS NOTICE?
-If you have questions or comments about this notice, you may email us at info@outercircl.com or privacy@outercircl.com, or contact us by post at:
+If you have questions or comments about this notice, you may email us at info@outercircle.com or privacy@outercircle.com, or contact us by post at:
 
 
 Outercircl Limited
@@ -493,7 +495,7 @@ We aim to respond to all privacy-related queries within 5 business days.
 Based on the applicable laws of your country, you may have the right to request access to the personal information we collect from you, details about how we have processed it, correct inaccuracies, or delete your personal information. You may also have the right to withdraw your consent to our processing of your personal information. These rights may be limited in some circumstances by applicable law.
 
 
-To request to review, update, or delete your personal information, please submit a data subject access request by emailing privacy@outercircl.com or by visiting the data subject access request link in our platform. We will respond to all verifiable requests within 30 days in accordance with applicable data protection laws.
+To request to review, update, or delete your personal information, please submit a data subject access request by emailing privacy@outercircle.com or by visiting the data subject access request link in our platform. We will respond to all verifiable requests within 30 days in accordance with applicable data protection laws.
 
 
 © 2026 Outercircl Limited. This document was last updated on 18 March 2026.`

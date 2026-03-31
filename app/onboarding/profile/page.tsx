@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -241,7 +243,7 @@ export default function OnboardingProfilePage() {
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Having issues?{' '}
           <a
-            href="mailto:support@outercircl.com"
+            href="mailto:support@outercircle.com"
             className="font-medium text-foreground hover:underline"
           >
             Contact support

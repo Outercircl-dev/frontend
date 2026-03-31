@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getRedirectUrlForState, getUserAuthState } from '@/lib/auth-state-machine';

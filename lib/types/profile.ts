@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 // User Profile Types for OuterCircl
 // SRS Requirements: F1 (User Registration), F7 (User Profile & Preferences)
 

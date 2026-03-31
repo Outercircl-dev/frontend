@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
@@ -6,32 +8,10 @@ import { usePathname } from 'next/navigation'
 
 import { OPEN_NOTIFICATIONS_DRAWER_EVENT } from '@/components/notifications/drawer-events'
 import { BrowserNotificationPrompt } from '@/components/notifications/BrowserNotificationPrompt'
+import { NotificationBodyText } from '@/components/notifications/NotificationBodyText'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
 import { useNotifications } from '@/hooks/useNotifications'
-
-type PreferenceField =
-  | 'recommendedActivities'
-  | 'upcomingActivityReminders'
-  | 'hostJoinCancelUpdates'
-  | 'timeLocationChangeAlerts'
-  | 'safetyAlerts'
-  | 'channelInApp'
-  | 'channelEmail'
-  | 'channelBrowser'
-
-const preferenceFields: Array<{ key: PreferenceField; label: string }> = [
-  { key: 'recommendedActivities', label: 'Recommended activity matches' },
-  { key: 'upcomingActivityReminders', label: 'Upcoming activity reminders' },
-  { key: 'hostJoinCancelUpdates', label: 'Participation and activity updates' },
-  { key: 'timeLocationChangeAlerts', label: 'Time/location change alerts' },
-  { key: 'safetyAlerts', label: 'Safety alerts' },
-  { key: 'channelInApp', label: 'In-app notifications' },
-  { key: 'channelEmail', label: 'Email notifications' },
-  { key: 'channelBrowser', label: 'Browser notifications' },
-]
 
 const HIDDEN_PREFIXES = ['/login', '/auth', '/rpc']
 
@@ -39,7 +19,7 @@ export function NotificationsDrawer() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const { notifications, unreadCount, isLoading, error, markAsRead, markAllAsRead, refresh } = useNotifications(20)
-  const { preferences, isSavingPreferences, updatePreferences, permission, requestPermission } = useNotifications()
+  const { permission, requestPermission } = useNotifications()
 
   const shouldRender = useMemo(() => {
     if (!pathname) return false
@@ -62,10 +42,6 @@ export function NotificationsDrawer() {
 
   if (!shouldRender) {
     return null
-  }
-
-  const togglePreference = async (key: PreferenceField, value: boolean) => {
-    await updatePreferences({ [key]: value })
   }
 
   return (
@@ -119,7 +95,7 @@ export function NotificationsDrawer() {
                 {notifications.map((item) => (
                   <div key={item.id} className={`rounded-md border p-2 ${item.isRead ? 'bg-background' : 'bg-muted/40'}`}>
                     <p className="text-sm font-medium">{item.title}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{item.body}</p>
+                    <NotificationBodyText body={item.body} className="mt-1 text-xs text-muted-foreground" />
                     {!item.isRead ? (
                       <Button
                         type="button"
@@ -142,22 +118,10 @@ export function NotificationsDrawer() {
             </Card>
 
             <Card className="space-y-3 p-3">
-              <p className="text-sm font-medium">Preferences</p>
-              {preferences
-                ? preferenceFields.map((field) => (
-                    <div key={field.key} className="flex items-center justify-between gap-3">
-                      <Label htmlFor={`drawer-pref-${field.key}`} className="pr-3 text-sm leading-snug">
-                        {field.label}
-                      </Label>
-                      <Checkbox
-                        id={`drawer-pref-${field.key}`}
-                        checked={Boolean(preferences[field.key])}
-                        disabled={isSavingPreferences}
-                        onCheckedChange={(checked) => void togglePreference(field.key, checked === true)}
-                      />
-                    </div>
-                  ))
-                : <p className="text-sm text-muted-foreground">Loading preferences...</p>}
+              <p className="text-sm font-medium">Preferences moved</p>
+              <p className="text-sm text-muted-foreground">
+                Manage notification preferences from Settings.
+              </p>
             </Card>
           </div>
 

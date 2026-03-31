@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import { MailCheck, ShieldCheck, Sparkles } from 'lucide-react'
 
 import { Card, CardContent } from '@/components/ui/card'

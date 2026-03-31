@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 

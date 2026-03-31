@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 'use client'
 
 import Link from 'next/link'
@@ -22,6 +24,11 @@ import { useActivityFeedback } from '@/hooks/useActivityFeedback'
 import { useActivityMessages } from '@/hooks/useActivityMessages'
 import { useParticipation } from '@/hooks/useParticipation'
 import { useViewerGender } from '@/hooks/useViewerGender'
+import {
+    DEFAULT_ACTIVITY_IMAGE,
+    getActivityImageForCategory,
+    getCategoryImageAttribution,
+} from '@/lib/activity-categories'
 import { genderRestrictionReason, meetsGenderRestriction } from '@/lib/activity-gender-restriction'
 import type { ParticipationState } from '@/lib/types/activity'
 import { hasActivityStarted } from '@/src/utils/activityDateTime'
@@ -102,7 +109,10 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
         ? 'Approximate area shown. Join to reveal exact meeting point.'
         : activity?.location?.address ?? 'Unknown location'
     const goingCount = Math.max(1, activity?.currentParticipants ?? 0)
-    const activityImageUrl = activity?.imageUrl || '/default-activity.svg'
+    const resolvedImage = getActivityImageForCategory(activity?.category, activity?.imageUrl)
+    const attribution = getCategoryImageAttribution(resolvedImage.category)
+    const [activityImageUrl, setActivityImageUrl] = useState(resolvedImage.src)
+    const [showDefaultAttribution, setShowDefaultAttribution] = useState(resolvedImage.isDefault)
 
     const meetsActivityGenderRestriction = Boolean(
         !activity || meetsGenderRestriction(activity.genderRestriction, profileGender),
@@ -164,6 +174,11 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
             void refetchMessages()
         }
     }, [activityId, isHost, refetchMessages, viewerStatus])
+
+    useEffect(() => {
+        setActivityImageUrl(resolvedImage.src)
+        setShowDefaultAttribution(resolvedImage.isDefault)
+    }, [resolvedImage.isDefault, resolvedImage.src])
 
     const handleJoin = async () => {
         try {
@@ -343,7 +358,35 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                         src={activityImageUrl}
                                         alt={`${activity.title} hero image`}
                                         className="h-64 w-full object-cover md:h-80 lg:h-96"
+                                        onError={() => {
+                                            if (activityImageUrl !== DEFAULT_ACTIVITY_IMAGE) {
+                                                setActivityImageUrl(DEFAULT_ACTIVITY_IMAGE)
+                                            }
+                                            setShowDefaultAttribution(false)
+                                        }}
                                     />
+                                    {showDefaultAttribution && attribution ? (
+                                        <p className="px-3 py-1 text-[11px] text-muted-foreground/80">
+                                            Photo by{' '}
+                                            <a
+                                                href={attribution.photographerUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="underline-offset-2 hover:underline"
+                                            >
+                                                {attribution.photographerName}
+                                            </a>{' '}
+                                            on{' '}
+                                            <a
+                                                href={attribution.sourceUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="underline-offset-2 hover:underline"
+                                            >
+                                                {attribution.sourceName}
+                                            </a>
+                                        </p>
+                                    ) : null}
                                 </div>
                                 <div className="grid items-stretch gap-6 lg:grid-cols-[1.4fr_1fr]">
                                     <div className="space-y-6">

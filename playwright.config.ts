@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({

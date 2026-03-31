@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 

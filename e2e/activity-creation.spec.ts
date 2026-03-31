@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import { expect, test } from '@playwright/test'
 
 async function mockAuthenticatedUser(page: import('@playwright/test').Page) {

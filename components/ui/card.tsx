@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import * as React from 'react'
 import { cn } from '@/lib/utils'
 
