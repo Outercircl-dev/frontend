@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import type { Metadata } from 'next'
 import { LegalDocumentPage } from '@/components/legal/LegalDocumentPage'
 
@@ -7,13 +9,13 @@ export const metadata: Metadata = {
 }
 
 const TERMS_OF_SERVICE_CONTENT = String.raw`TERMS OF SERVICE
-outercircl limited  |  outercircl.com
+outercircl limited  |  outercircle.com
 Last updated: March 18, 2026
 AGREEMENT TO OUR LEGAL TERMS
 We are outercircl limited ('Company', 'we', 'us', or 'our'), a company registered in Ireland at 136 Capel St, County Dublin D01 T2C9, Ireland.
-We operate the website https://outercircl.com (the 'Site'), the mobile application outercircl (the 'App'), as well as any other related products and services that refer or link to these Legal Terms (collectively, the 'Services' or the 'Platform').
+We operate the website https://outercircle.com (the 'Site'), the mobile application outercircl (the 'App'), as well as any other related products and services that refer or link to these Legal Terms (collectively, the 'Services' or the 'Platform').
 We provide a social wellness platform that enables users to create, discover, and join in-person events, activities, and community groups. All events and activities made available through the Platform are created, organized, and managed entirely by users, not by the Company, unless expressly and clearly labeled in writing by us as 'Company-Sponsored.'
-You can contact us by email at privacy@outercircl.com or by mail to 136 Capel St, County Dublin D01 T2C9, Ireland.
+You can contact us by email at privacy@outercircle.com or by mail to 136 Capel St, County Dublin D01 T2C9, Ireland.
 These Legal Terms constitute a legally binding agreement made between you, whether personally or on behalf of an entity ('you'), and outercircl limited, concerning your access to and use of the Services. You agree that by accessing the Services, you have read, understood, and agreed to be bound by all of these Legal Terms. IF YOU DO NOT AGREE WITH ALL OF THESE LEGAL TERMS, THEN YOU ARE EXPRESSLY PROHIBITED FROM USING THE SERVICES AND YOU MUST DISCONTINUE USE IMMEDIATELY.
 We will provide you with prior notice of any scheduled changes to the Services. Changes will become effective seven (7) days after notice is given, except for changes applying to new functionality, security updates, bug fixes, or court orders, which will be effective immediately. By continuing to use the Services after the effective date of any changes, you agree to be bound by the modified terms.
 The Services are intended for users who are at least 18 years old. Persons under the age of 18 are not permitted to use or register for the Services.
@@ -90,7 +92,7 @@ When assessing the legitimacy of a User Event or Host, the Company recommends th
 * be alert to listings that seem unusually vague, offer unrealistic promises, or pressure you to pay quickly or outside of normal channels;
 * verify the details of any User Event - including the venue, time, and Host identity - before attending; and
 * trust your instincts - if something feels wrong about an event or Host, do not attend and do not pay.
-If you encounter a User Event listing, Host profile, or user behaviour that you believe may be fraudulent, deceptive, illegal, or harmful, please report it to us immediately at privacy@outercircl.com or through the reporting tools available on the Platform. The Company will investigate reports in good faith and take action where we reasonably determine that these Terms or applicable law have been violated.
+If you encounter a User Event listing, Host profile, or user behaviour that you believe may be fraudulent, deceptive, illegal, or harmful, please report it to us immediately at privacy@outercircle.com or through the reporting tools available on the Platform. The Company will investigate reports in good faith and take action where we reasonably determine that these Terms or applicable law have been violated.
 HOWEVER, THE COMPANY CANNOT GUARANTEE THAT ALL FRAUDULENT OR HARMFUL ACTIVITY WILL BE DETECTED OR PREVENTED, AND THE COMPANY ACCEPTS NO LIABILITY FOR ANY LOSS, HARM, INJURY, OR DAMAGES SUFFERED BY ANY USER AS A RESULT OF FRAUDULENT, DECEPTIVE, OR HARMFUL CONDUCT BY ANY OTHER USER, WHETHER OR NOT SUCH CONDUCT WAS REPORTED TO THE COMPANY OR KNOWN TO THE COMPANY AT THE TIME OF THE RELEVANT EVENTS.
 Reporting a suspected fraudulent or harmful Host or event to the Company does not create any obligation on the Company to take any specific action, does not guarantee that the relevant content or account will be removed, and does not give rise to any liability on the part of the Company if the reported conduct subsequently causes harm.
 5.4  Company Has No Obligation to Monitor
@@ -270,7 +272,7 @@ WE RESERVE THE RIGHT, AT ANY TIME AND IN OUR SOLE AND ABSOLUTE DISCRETION, WITH 
 IF YOUR ACCOUNT OR MEMBERSHIP IS SUSPENDED OR TERMINATED BY US FOR ANY REASON: YOU WILL NOT BE ENTITLED TO ANY REFUND OF ANY FEES PAID; ANY UNUSED TOP-UP BALANCE OR ACCOUNT CREDITS WILL BE FORFEITED IMMEDIATELY WITH NO OBLIGATION TO REFUND; AND ANY PENDING OR IN-PROGRESS TRANSACTIONS MAY BE CANCELLED AT OUR DISCRETION OR STRIPE'S DISCRETION.
 To the extent required by mandatory applicable law, we will honour any refund or remedy to which you are legally entitled.
 14.3  Voluntary Cancellation by You
-You may cancel your membership or subscription at any time by logging into your account and following the cancellation process, or by contacting us at privacy@outercircl.com. Your cancellation will take effect at the end of the then-current paid billing period. You will not receive a refund for any amounts already paid or charged.
+You may cancel your membership or subscription at any time by logging into your account and following the cancellation process, or by contacting us at privacy@outercircle.com. Your cancellation will take effect at the end of the then-current paid billing period. You will not receive a refund for any amounts already paid or charged.
 14.4  Prohibited Re-Registration
 If we terminate or suspend your account, you are prohibited from registering a new account without our prior written consent. We reserve the right to take appropriate legal action, including pursuing civil, criminal, and injunctive redress.
 14.5  Effect of Termination
@@ -284,11 +286,11 @@ In the event of a Force Majeure Event, the Company's obligations under these Ter
 
 16. DATA PROTECTION AND SECURITY
 16.1  Privacy Policy
-Please review our Privacy Policy at outercircl.com/privacy. By using the Services, you agree to be bound by our Privacy Policy, which is incorporated into these Legal Terms. The Services are hosted in Ireland. If you access the Services from any other region, through your continued use you are transferring your data to Ireland, and you expressly consent to have your data transferred to and processed in Ireland in accordance with applicable data protection law, including the GDPR. By using payment features of the Platform, you acknowledge that Stripe will process your personal data in accordance with Stripe's Privacy Policy (https://stripe.com/privacy).
+Please review our Privacy Policy at outercircle.com/privacy. By using the Services, you agree to be bound by our Privacy Policy, which is incorporated into these Legal Terms. The Services are hosted in Ireland. If you access the Services from any other region, through your continued use you are transferring your data to Ireland, and you expressly consent to have your data transferred to and processed in Ireland in accordance with applicable data protection law, including the GDPR. By using payment features of the Platform, you acknowledge that Stripe will process your personal data in accordance with Stripe's Privacy Policy (https://stripe.com/privacy).
 16.2  GDPR and Data Subject Rights
-To the extent applicable, we process personal data as a data controller in accordance with Regulation (EU) 2016/679 (GDPR) and applicable national implementing legislation. Your rights as a data subject under the GDPR, including the right of access, rectification, erasure, restriction of processing, data portability, and the right to object, are governed by our Privacy Policy. To exercise any of these rights, please contact us at privacy@outercircl.com.
+To the extent applicable, we process personal data as a data controller in accordance with Regulation (EU) 2016/679 (GDPR) and applicable national implementing legislation. Your rights as a data subject under the GDPR, including the right of access, rectification, erasure, restriction of processing, data portability, and the right to object, are governed by our Privacy Policy. To exercise any of these rights, please contact us at privacy@outercircle.com.
 16.3  Data Breach Notification
-In the event of a personal data breach likely to result in a risk to the rights and freedoms of natural persons, the Company will notify the relevant supervisory authority in accordance with Article 33 GDPR (within 72 hours of becoming aware, where feasible) and, where required under Article 34 GDPR, will communicate the breach to affected data subjects without undue delay. If you believe your account or personal data has been compromised, please contact us immediately at privacy@outercircl.com.
+In the event of a personal data breach likely to result in a risk to the rights and freedoms of natural persons, the Company will notify the relevant supervisory authority in accordance with Article 33 GDPR (within 72 hours of becoming aware, where feasible) and, where required under Article 34 GDPR, will communicate the breach to affected data subjects without undue delay. If you believe your account or personal data has been compromised, please contact us immediately at privacy@outercircle.com.
 
 
 17. PROHIBITED ACTIVITIES
@@ -399,7 +401,7 @@ In order to resolve a complaint regarding the Services or to receive further inf
 outercircl limited
 136 Capel St, County Dublin D01 T2C9
 Ireland
-privacy@outercircl.com
+privacy@outercircle.com
 
 
 This Terms of Service document is provided as a working draft. It should be reviewed and approved by a qualified solicitor or attorney familiar with Irish, EU, and applicable US law before publication.`

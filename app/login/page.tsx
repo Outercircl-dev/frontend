@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import Image from 'next/image'
 import type { Metadata } from 'next'
 
@@ -59,7 +61,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                         Need help?{' '}
                         <a
                             className="font-medium text-foreground underline-offset-4 hover:underline"
-                            href="mailto:support@outercircl.com"
+                            href="mailto:support@outercircle.com"
                         >
                             Contact support
                         </a>

@@ -1,6 +1,9 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { PosthogProvider } from "@/components/analytics/PosthogProvider";
+import { AppFooter } from "@/components/layout/AppFooter";
 import { CookieBanner } from "@/components/legal/CookieBanner";
 import { NotificationsDrawer } from "@/components/notifications/NotificationsDrawer";
 import { Toaster } from "@/components/ui/sonner";
@@ -17,7 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://outercircl.com'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://outercircle.com'),
   applicationName: 'OuterCircl',
   title: {
     default: 'OuterCircl',
@@ -89,6 +92,7 @@ export default function RootLayout({
       >
         <PosthogProvider>
           {children}
+          <AppFooter />
           <NotificationsDrawer />
           <Toaster />
           <CookieBanner />

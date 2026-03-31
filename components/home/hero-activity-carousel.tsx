@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
@@ -23,9 +25,9 @@ export function HeroActivityCarousel() {
             <p className="text-[clamp(1.85rem,5.9vw,3.7rem)] font-extrabold leading-[0.98] tracking-tight text-[#2f3341]">
                 your next activity
             </p>
-            <div className="mt-7 h-[clamp(3.2rem,8.4vw,5.9rem)] overflow-hidden">
+            <div className="mt-7 h-[clamp(3.8rem,10vw,6.2rem)] overflow-hidden sm:h-[clamp(3.2rem,8.4vw,5.9rem)]">
                 <div
-                    className="flex h-full items-center text-[clamp(2.7rem,7.8vw,5.4rem)] font-extrabold leading-[1.02] tracking-tight text-[#e44361]"
+                    className="flex h-full items-center text-[clamp(2.2rem,8.2vw,5.4rem)] font-extrabold leading-[1.02] tracking-tight text-[#e44361] sm:text-[clamp(2.7rem,7.8vw,5.4rem)]"
                     style={{
                         transform: `translateX(-${currentIndex * 100}%)`,
                         transitionProperty: isTransitioning ? 'transform' : 'none',
@@ -45,7 +47,7 @@ export function HeroActivityCarousel() {
                     aria-live="polite"
                 >
                     {phrases.map((phrase, index) => (
-                        <span key={`${phrase}-${index}`} className="min-w-full text-center">
+                        <span key={`${phrase}-${index}`} className="min-w-full text-center whitespace-normal break-words px-2">
                             {phrase}
                         </span>
                     ))}

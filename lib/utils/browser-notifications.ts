@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import type { NotificationItem } from '@/lib/types/notification'
 
 export function getBrowserPermission(): NotificationPermission | 'unsupported' {

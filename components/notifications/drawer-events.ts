@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 export const OPEN_NOTIFICATIONS_DRAWER_EVENT = 'outercircl:open-notifications-drawer'
 
 export function openNotificationsDrawer() {

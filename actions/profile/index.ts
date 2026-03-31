@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 export { getProfileAction, checkProfileCompleted } from './get-profile-action'
 export { getInterestsAction } from './get-interests-action'
 // export { completeProfileAction, saveProfileStepAction } from './complete-profile-action'

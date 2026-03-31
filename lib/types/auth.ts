@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 export type TierKey = string;
 
 export interface MembershipTierHostingRules {

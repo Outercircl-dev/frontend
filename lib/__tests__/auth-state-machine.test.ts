@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 /**
  * Unit tests for auth-state-machine
  * @see lib/auth-state-machine.ts

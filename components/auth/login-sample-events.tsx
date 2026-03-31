@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import Image from 'next/image'
 import { CalendarDays, MapPin } from 'lucide-react'
 

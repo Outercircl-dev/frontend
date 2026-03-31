@@ -1,7 +1,10 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 'use client'
 
 import { Bell, BellRing } from 'lucide-react'
 
+import { NotificationBodyText } from '@/components/notifications/NotificationBodyText'
 import { openNotificationsDrawer } from '@/components/notifications/drawer-events'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -34,7 +37,7 @@ export function ProfileNotificationsSection() {
         {items.map((item) => (
           <div key={item.id} className={`rounded-lg border p-3 ${item.isRead ? 'bg-background' : 'bg-muted/30'}`}>
             <p className="text-sm font-medium">{item.title}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{item.body}</p>
+            <NotificationBodyText body={item.body} className="mt-1 text-xs text-muted-foreground" />
             {!item.isRead ? (
               <Button
                 type="button"

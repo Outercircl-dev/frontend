@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 'use client'
 
 import Link from 'next/link'
@@ -32,6 +34,8 @@ import {
 import type { ActivityGenderRestriction, RecurrenceWeekday } from '@/lib/types/activity'
 import { RecurrenceCalendarPreview } from '@/components/activities/recurrence-calendar-preview'
 
+const MAX_ACTIVITY_PARTICIPANTS = 4
+
 const WEEKDAYS: Array<{ value: RecurrenceWeekday; label: string }> = [
   { value: 'monday', label: 'Mon' },
   { value: 'tuesday', label: 'Tue' },
@@ -61,6 +65,10 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
   const groupsRules = tierRules?.groups
   const verificationRules = tierRules?.verification
   const maxParticipantsLimit = hostingRules?.maxParticipantsPerActivity
+  const resolvedMaxParticipantsLimit = Math.min(
+    maxParticipantsLimit ?? MAX_ACTIVITY_PARTICIPANTS,
+    MAX_ACTIVITY_PARTICIPANTS,
+  )
   const enforceExactMaxParticipants = hostingRules?.enforceExactMaxParticipants
   const groupsEnabled = groupsRules?.enabled ?? false
   const requiresVerifiedHost = Boolean(verificationRules?.requiresVerifiedHostForHosting)
@@ -103,13 +111,10 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
   const minActivityDate = getCurrentDateInTimezone(timezone)
 
   useEffect(() => {
-    if (maxParticipantsLimit === null || maxParticipantsLimit === undefined) {
-      return
-    }
     if (maxParticipantsDisabled || !maxParticipants) {
-      setMaxParticipants(String(maxParticipantsLimit))
+      setMaxParticipants(String(resolvedMaxParticipantsLimit))
     }
-  }, [maxParticipantsDisabled, maxParticipantsLimit, maxParticipants])
+  }, [maxParticipantsDisabled, resolvedMaxParticipantsLimit, maxParticipants])
 
   useEffect(() => {
     let cancelled = false
@@ -150,7 +155,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
         setActivityDate(data.activityDate)
         setStartTime(data.startTime)
         setEndTime(data.endTime ?? '')
-        setMaxParticipants(String(data.maxParticipants))
+        setMaxParticipants(String(Math.min(data.maxParticipants, MAX_ACTIVITY_PARTICIPANTS)))
         setIsPublic(Boolean(data.isPublic))
         setGroupId(data.group?.id ?? undefined)
         setCurrentImageUrl(data.imageUrl ?? null)
@@ -276,10 +281,8 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
       setError(null)
       const numericMaxParticipants = Number(maxParticipants)
       const resolvedMaxParticipants =
-        maxParticipantsLimit !== null &&
-        maxParticipantsLimit !== undefined &&
-        (maxParticipantsDisabled || numericMaxParticipants > maxParticipantsLimit)
-          ? maxParticipantsLimit
+        maxParticipantsDisabled || numericMaxParticipants > resolvedMaxParticipantsLimit
+          ? resolvedMaxParticipantsLimit
           : numericMaxParticipants
       const payload = {
         title,
@@ -523,7 +526,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
               <Input
                 type="number"
                 min={1}
-                max={maxParticipantsLimit ?? undefined}
+                max={resolvedMaxParticipantsLimit}
                 value={maxParticipants}
                 onChange={(e) => {
                   const next = e.target.value
@@ -533,13 +536,13 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
                   }
                   const numeric = Number(next)
                   if (Number.isNaN(numeric)) return
-                  if (maxParticipantsLimit !== null && maxParticipantsLimit !== undefined && numeric > maxParticipantsLimit) {
-                    setMaxParticipants(String(maxParticipantsLimit))
+                  if (numeric > resolvedMaxParticipantsLimit) {
+                    setMaxParticipants(String(resolvedMaxParticipantsLimit))
                     return
                   }
                   setMaxParticipants(next)
                 }}
-                placeholder={maxParticipantsDisabled ? `Fixed at ${maxParticipantsLimit}` : 'Max participants'}
+                placeholder={maxParticipantsDisabled ? `Fixed at ${resolvedMaxParticipantsLimit}` : 'Max participants'}
                 disabled={maxParticipantsDisabled}
                 className={maxParticipantsDisabled ? 'opacity-60' : undefined}
               />

@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
@@ -13,6 +15,7 @@ import {
 
 import { getProfileAction } from '@/actions/profile'
 import { ProfileNotificationsSection } from '@/components/notifications/ProfileNotificationsSection'
+import { ProfileSchedulingSection } from '@/components/profile/ProfileSchedulingSection'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -383,6 +386,8 @@ export default async function ProfilePage() {
                                 </div>
                             </CardContent>
                         </Card>
+
+                        <ProfileSchedulingSection viewerUserId={profile.user_id} />
                     </div>
 
                     <div className="space-y-6">

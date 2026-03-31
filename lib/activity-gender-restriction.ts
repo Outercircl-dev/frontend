@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import type { ActivityGenderRestriction } from '@/lib/types/activity'
 import type { Gender } from '@/lib/types/profile'
 

@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import { validateActivityCreationInput } from '@/src/utils/activityCreationValidation'
 
 describe('validateActivityCreationInput', () => {

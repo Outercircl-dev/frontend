@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 const ADDRESS_PATTERN = /^(?=.*[\p{L}])[\p{L}\p{M}0-9\s,.'#/()&-]+$/u;
 
 function isValidIanaTimezone(timezone: string): boolean {

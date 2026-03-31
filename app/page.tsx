@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import Link from 'next/link'
@@ -19,12 +21,12 @@ const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'OuterCircl',
-    url: 'https://outercircl.com',
+    url: 'https://outercircle.com',
     description: 'Discover and join local activities hosted by trusted communities.',
     publisher: {
         '@type': 'Organization',
         name: 'OuterCircl',
-        logo: 'https://outercircl.com/logo.png',
+        logo: 'https://outercircle.com/logo.png',
     },
 }
 
@@ -328,74 +330,6 @@ export default function Home() {
                     </div>
                 </section>
             </main>
-
-            <footer className="bg-gray-50 px-4 py-12 text-gray-700">
-                <div className="mx-auto w-full max-w-6xl">
-                    <div className="mb-8 flex flex-col justify-between gap-8 md:flex-row">
-                        <div>
-                            <Image
-                                src="/logo.png"
-                                alt="outercircl"
-                                width={140}
-                                height={40}
-                                className="h-8 w-auto"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-8 md:grid-cols-2">
-                            <div>
-                                <p className="mb-4 font-semibold">Company</p>
-                                <ul className="space-y-2 text-gray-500">
-                                    <li>
-                                        <Link href="/login" className="hover:text-[#7a1555]">
-                                            About Us
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link href="/login" className="hover:text-[#7a1555]">
-                                            Privacy Policy
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link href="/login" className="hover:text-[#7a1555]">
-                                            Terms of Service
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <a
-                                            href="mailto:hello@outercircl.com"
-                                            className="hover:text-[#7a1555]"
-                                        >
-                                            hello@outercircl.com
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <div>
-                                <p className="mb-4 font-semibold">Resources</p>
-                                <ul className="space-y-2 text-gray-500">
-                                    <li>
-                                        <Link href="/login" className="hover:text-[#7a1555]">
-                                            Help Center
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link href="/login" className="hover:text-[#7a1555]">
-                                            The Buzz
-                                        </Link>
-                                    </li>
-                                </ul>
-                            </div>
-
-                        </div>
-                    </div>
-
-                    <div className="border-t border-gray-200 pt-8 text-center text-sm text-gray-500">
-                        <p>&copy; 2026 outercircl. All rights reserved.</p>
-                    </div>
-                </div>
-            </footer>
 
         </div>
     )

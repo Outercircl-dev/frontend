@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 /**
  * Time utility functions for OuterCircl
  * Provides human-readable time formatting for activity feeds and timestamps.

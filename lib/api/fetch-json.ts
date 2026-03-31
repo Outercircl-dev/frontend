@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import { ApiError, toApiError } from '@/lib/errors/api-error'
 
 export async function fetchJson<T>(input: RequestInfo | URL, init: RequestInit, fallbackMessage: string): Promise<T> {

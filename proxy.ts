@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import { NextRequest } from "next/server";
 import { updateSession } from "./lib/supabase/proxy";
 

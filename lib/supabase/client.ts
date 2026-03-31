@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Outer Circle. All rights reserved.
+
 import { createBrowserClient } from "@supabase/ssr";
 
 export function createClient() {
