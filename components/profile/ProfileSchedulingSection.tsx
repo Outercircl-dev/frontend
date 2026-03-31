@@ -108,9 +108,7 @@ export function ProfileSchedulingSection({ viewerUserId }: { viewerUserId: strin
           return false
         }
         const viewerStatus = activity.viewerParticipation?.status
-        const isAttending = Boolean(
-          viewerStatus && viewerStatus !== 'not_joined' && viewerStatus !== 'cancelled',
-        )
+        const isAttending = Boolean(viewerStatus && viewerStatus !== 'not_joined')
         const isHosting = activity.hostId === viewerUserId
         return isAttending || isHosting
       }),
