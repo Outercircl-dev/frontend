@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Outer Circle. All rights reserved.
+// Copyright (c) 2026 outercircl. All rights reserved.
 
 import Image from 'next/image'
 import type { Metadata } from 'next'
@@ -9,7 +9,7 @@ import { HeroCtaButtons } from '@/components/home/hero-cta-buttons'
 import { FeaturedActivitiesCarousel } from '@/components/home/featured-activities-carousel'
 
 export const metadata: Metadata = {
-    title: 'OuterCircl | Discover Your Next Activity',
+    title: 'outercircl | Discover Your Next Activity',
     description:
         'Discover local meetups, family-friendly events, and real community activities with OuterCircl.',
     alternates: {
