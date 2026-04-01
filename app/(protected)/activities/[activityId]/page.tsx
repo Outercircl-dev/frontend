@@ -106,7 +106,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     const activityStarted = activity ? hasActivityStarted(activity.activityDate, activity.startTime) : false
 
     const locationLabel = activity?.meetingPointHidden
-        ? 'Approximate area shown. Join to reveal exact meeting point.'
+        ? activity?.location?.address ?? 'Nearby area'
         : activity?.location?.address ?? 'Unknown location'
     const goingCount = Math.max(1, activity?.currentParticipants ?? 0)
     const resolvedImage = getActivityImageForCategory(activity?.category, activity?.imageUrl)
@@ -328,7 +328,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                             <CardTitle className="text-3xl">{activity.title}</CardTitle>
                                             <p className="text-muted-foreground">{activity.description}</p>
                                             <p className="text-sm text-muted-foreground">
-                                                Hosted by {activity.hostUsername || activity.hostName || activity.hostId.slice(0, 8)}
+                                                Hosted by {activity.hostName || activity.hostUsername || activity.hostId.slice(0, 8)}
                                             </p>
                                         </div>
                                         {!isHost ? (

@@ -81,10 +81,9 @@ export function ActivityCard({
   const current = Math.max(1, activity.currentParticipants ?? 0)
   const ratio = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0
   const spotsLeft = total > 0 ? Math.max(0, total - current) : null
-  const locationLabel =
-    activity.meetingPointHidden && activity.location?.address
-      ? 'Join to reveal exact meeting point'
-      : activity.location?.address ?? 'Unknown location'
+  const locationLabel = activity.meetingPointHidden
+    ? activity.location?.address ?? 'Nearby area'
+    : activity.location?.address ?? 'Unknown location'
   const isHost = Boolean(viewerId && activity.hostId === viewerId)
   const hasStarted = hasActivityStarted(activity.activityDate, activity.startTime)
   const participationStatus = activity.viewerParticipation?.status ?? 'not_joined'

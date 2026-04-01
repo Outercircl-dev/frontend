@@ -34,7 +34,7 @@ import {
 import type { ActivityGenderRestriction, RecurrenceWeekday } from '@/lib/types/activity'
 import { RecurrenceCalendarPreview } from '@/components/activities/recurrence-calendar-preview'
 
-const MAX_ACTIVITY_PARTICIPANTS = 4
+const MAX_ACTIVITY_PARTICIPANTS = 5
 
 const WEEKDAYS: Array<{ value: RecurrenceWeekday; label: string }> = [
   { value: 'monday', label: 'Mon' },

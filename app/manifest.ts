@@ -1,11 +1,11 @@
-// Copyright (c) 2026 Outer Circle. All rights reserved.
+// Copyright (c) 2026 outercircl. All rights reserved.
 
 import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: 'OuterCircl',
-        short_name: 'OuterCircl',
+        name: 'outercircl',
+        short_name: 'outercircl',
         description:
             'Discover local activities, connect with trusted communities, and plan your next meetup with OuterCircl.',
         start_url: '/',

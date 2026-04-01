@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Outer Circle. All rights reserved.
+// Copyright (c) 2026 outercircl. All rights reserved.
 
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -21,15 +21,15 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://outercircle.com'),
-  applicationName: 'OuterCircl',
+  applicationName: 'outercircl',
   title: {
-    default: 'OuterCircl',
-    template: '%s | OuterCircl',
+    default: 'outercircl',
+    template: '%s | outercircl',
   },
   description:
     'OuterCircl helps you discover and join trusted local activities, events, and communities.',
   keywords: [
-    'OuterCircl',
+    'outercircl',
     'local activities',
     'community events',
     'meetups',
@@ -41,10 +41,10 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     url: '/',
-    title: 'OuterCircl',
+    title: 'outercircl',
     description:
       'Discover and join trusted local activities, from fitness groups to family meetups.',
-    siteName: 'OuterCircl',
+    siteName: 'outercircl',
     images: [
       {
         url: '/landing/connect-friends.svg',
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'OuterCircl',
+    title: 'outercircl',
     description:
       'Discover and join trusted local activities, from fitness groups to family meetups.',
     images: ['/landing/connect-friends.svg'],

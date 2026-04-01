@@ -84,9 +84,7 @@ export function ActivityLocationMap({ latitude, longitude, isApproximate, classN
   return (
     <div className={`space-y-2 ${className ?? ''}`}>
       <div ref={mapRef} className="h-56 w-full overflow-hidden rounded-xl border md:h-72" />
-      {isApproximate ? (
-        <p className="text-xs text-muted-foreground">Approximate area shown. Join to reveal exact meeting point.</p>
-      ) : null}
+      {isApproximate ? <p className="text-xs text-muted-foreground">Approximate area shown.</p> : null}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   )
