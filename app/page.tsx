@@ -68,6 +68,12 @@ export default function Home() {
                     </Link>
                     <div className="flex items-center gap-2.5">
                         <Link
+                            href="/about"
+                            className="px-1 text-sm font-semibold text-[#25253b] transition hover:text-[#eb1242]"
+                        >
+                            Our Story
+                        </Link>
+                        <Link
                             href="/login"
                             className="rounded-full border border-[#eb1242]/35 px-4 py-2 text-sm font-semibold text-[#eb1242] transition hover:bg-[#fff1f5]"
                         >

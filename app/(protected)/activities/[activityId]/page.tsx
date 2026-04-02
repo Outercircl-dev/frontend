@@ -3,6 +3,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { use, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, CalendarDays, Clock, Lock, MapPin, Pin, Users } from 'lucide-react'
 
@@ -10,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
+import { ConfirmationModal } from '@/components/ui/confirmation-modal'
 import { ErrorBlock } from '@/components/ui/error-block'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -30,6 +32,7 @@ import {
     getCategoryImageAttribution,
 } from '@/lib/activity-categories'
 import { genderRestrictionReason, meetsGenderRestriction } from '@/lib/activity-gender-restriction'
+import { deleteActivityByHost, getDeleteActivityErrorMessage } from '@/lib/api/activity-management'
 import type { ParticipationState } from '@/lib/types/activity'
 import { hasActivityStarted } from '@/src/utils/activityDateTime'
 
@@ -62,6 +65,7 @@ function recurrenceLabel(activity: {
 
 export default function ActivityDetailPage({ params }: { params: Promise<{ activityId: string }> }) {
     const { activityId } = use(params)
+    const router = useRouter()
     const { activity, isLoading, error, join, cancel } = useParticipation(activityId)
     const { user } = useAuthState()
     const tierRules = user?.tierRules
@@ -88,6 +92,8 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     const [joinMessage, setJoinMessage] = useState('')
     const [actionError, setActionError] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
     const [messageText, setMessageText] = useState('')
     const [messageError, setMessageError] = useState<string | null>(null)
     const [isSendingMessage, setIsSendingMessage] = useState(false)
@@ -203,6 +209,20 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
             setActionError(err instanceof Error ? err.message : 'Failed to cancel participation')
         } finally {
             setIsSubmitting(false)
+        }
+    }
+
+    const handleConfirmDeleteActivity = async () => {
+        try {
+            setActionError(null)
+            setIsDeleting(true)
+            await deleteActivityByHost(activityId)
+            router.push('/activities')
+        } catch (err) {
+            setActionError(getDeleteActivityErrorMessage(err))
+        } finally {
+            setIsDeleting(false)
+            setIsDeleteModalOpen(false)
         }
     }
 
@@ -514,7 +534,21 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                                         <Button asChild size="sm" variant="outline">
                                                             <Link href="/activities/groups">Manage groups</Link>
                                                         </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="destructive"
+                                                            className="text-white hover:text-white"
+                                                            onClick={() => setIsDeleteModalOpen(true)}
+                                                            disabled={activityStarted || isDeleting}
+                                                        >
+                                                            {isDeleting ? 'Deleting...' : 'Delete activity'}
+                                                        </Button>
                                                     </div>
+                                                    {activityStarted ? (
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Activity deletion is only available before start time.
+                                                        </p>
+                                                    ) : null}
                                                 </div>
                                             )}
                                         </div>
@@ -868,6 +902,15 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                     </>
                 ) : null}
             </main>
+            <ConfirmationModal
+                open={isDeleteModalOpen}
+                title="Delete activity?"
+                description="This action permanently removes the activity for everyone and cannot be undone."
+                confirmLabel="Delete activity"
+                isConfirming={isDeleting}
+                onCancel={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleConfirmDeleteActivity}
+            />
         </div>
     )
 }

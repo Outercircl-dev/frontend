@@ -13,12 +13,14 @@ import { UpgradeHint } from '@/components/membership/UpgradeHint'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ConfirmationModal } from '@/components/ui/confirmation-modal'
 import { ErrorBlock } from '@/components/ui/error-block'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuthState } from '@/hooks/useAuthState'
+import { deleteActivityByHost, getDeleteActivityErrorMessage } from '@/lib/api/activity-management'
 import { fetchJson, getErrorMessage } from '@/lib/api/fetch-json'
 import { uploadActivityImage, validateActivityImage } from '@/lib/api/activity-image-upload'
 import { ACTIVITY_CATEGORY_OPTIONS, type ActivityCategoryOption } from '@/lib/activity-categories'
@@ -102,6 +104,8 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
   const [interestsError, setInterestsError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null)
@@ -271,6 +275,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
         ? 'Select at least one weekday for weekly recurrence.'
         : null
   const canSubmitWithRecurrence = canSubmit && !recurrenceValidationError
+  const activityStarted = activity ? hasActivityStarted(activity.activityDate, activity.startTime) : false
 
   const handleSubmit = async () => {
     try {
@@ -331,6 +336,22 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
       setError(getErrorMessage(err, 'Failed to update activity'))
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleConfirmDeleteActivity = async () => {
+    if (!activity) return
+
+    try {
+      setIsDeleting(true)
+      setError(null)
+      await deleteActivityByHost(activity.id)
+      router.push('/activities')
+    } catch (err) {
+      setError(getDeleteActivityErrorMessage(err))
+    } finally {
+      setIsDeleting(false)
+      setIsDeleteModalOpen(false)
     }
   }
 
@@ -684,6 +705,39 @@ export default function EditActivityPage({ params }: { params: Promise<{ activit
           ) : null}
         </CardContent>
       </Card>
+      <Card className="border-destructive/30">
+        <CardHeader>
+          <CardTitle>Danger zone</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Deleting an activity permanently removes it for all participants.
+          </p>
+          <Button
+            type="button"
+            variant="destructive"
+            className="text-white hover:text-white"
+            onClick={() => setIsDeleteModalOpen(true)}
+            disabled={!activity || activityStarted || isDeleting}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete activity'}
+          </Button>
+          {activityStarted ? (
+            <p className="text-xs text-muted-foreground">
+              Activity deletion is only available before start time.
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
+      <ConfirmationModal
+        open={isDeleteModalOpen}
+        title="Delete activity?"
+        description="This action permanently removes the activity for all participants and cannot be undone."
+        confirmLabel="Delete activity"
+        isConfirming={isDeleting}
+        onCancel={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDeleteActivity}
+      />
     </div>
   )
 }
