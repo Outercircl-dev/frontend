@@ -51,6 +51,7 @@ export default function FeedPage() {
         const params = new URLSearchParams()
         params.set('page', String(page))
         params.set('limit', String(limit))
+        params.set('sort', sort)
 
         const data = await fetchJson<ActivitiesResponse>(
           `/rpc/v1/activities?${params.toString()}`,
@@ -71,7 +72,11 @@ export default function FeedPage() {
     return () => {
       cancelled = true
     }
-  }, [page, limit])
+  }, [page, limit, sort])
+
+  useEffect(() => {
+    setPage(1)
+  }, [sort])
 
   const categories = useMemo(() => {
     const items = raw?.items ?? []
@@ -102,11 +107,6 @@ export default function FeedPage() {
 
     const matchesCategory = (a: Activity) => (category === 'all' ? true : a.category === category)
 
-    const parsedCreated = (a: Activity) => {
-      const dt = new Date(a.createdAt)
-      return Number.isNaN(dt.getTime()) ? 0 : dt.getTime()
-    }
-
     const isUpcoming = (a: Activity) => {
       if (a.status === 'completed' || a.status === 'cancelled') return false
       return !hasActivityStarted(a.activityDate, a.startTime)
@@ -115,12 +115,6 @@ export default function FeedPage() {
     const visible = items.filter((a) => isUpcoming(a) && matchesQuery(a) && matchesCategory(a))
     const recommended = visible.filter((a) => (a.interestMatchCount ?? 0) > 0)
     const other = visible.filter((a) => (a.interestMatchCount ?? 0) === 0)
-
-    other.sort((a, b) =>
-      sort === 'latest'
-        ? parsedCreated(b) - parsedCreated(a)
-        : parsedCreated(a) - parsedCreated(b),
-    )
 
     return {
       recommendedItems: recommended,
