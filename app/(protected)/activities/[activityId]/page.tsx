@@ -5,7 +5,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { use, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CalendarDays, Clock, Lock, MapPin, Pin, Users } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Check, Clock, Copy, Lock, MapPin, Pin, Share2, Users } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -33,6 +33,11 @@ import {
 } from '@/lib/activity-categories'
 import { genderRestrictionReason, meetsGenderRestriction } from '@/lib/activity-gender-restriction'
 import { deleteActivityByHost, getDeleteActivityErrorMessage } from '@/lib/api/activity-management'
+import {
+    buildActivityDeepLinkUrl,
+    buildActivityShareEmailHref,
+    shouldUseNativeActivityShare,
+} from '@/lib/deep-links/activity'
 import type { ParticipationState } from '@/lib/types/activity'
 import { hasActivityStarted } from '@/src/utils/activityDateTime'
 
@@ -105,6 +110,8 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     const [participantRatings, setParticipantRatings] = useState<Record<string, { rating: number | null; comment: string }>>({})
     const [feedbackSubmitError, setFeedbackSubmitError] = useState<string | null>(null)
     const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
+    const [shareOrigin, setShareOrigin] = useState<string | null>(null)
+    const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
     const profileGender = useViewerGender(user?.supabaseUserId)
 
     const viewerStatus: ParticipationState | 'not_joined' = activity?.viewerParticipation?.status ?? 'not_joined'
@@ -147,6 +154,18 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     const showChatLockOverlay = messageAccessDenied || activityStarted
     const showFeedbackLockOverlay = Boolean(feedbackForm && !feedbackForm.activityEnded)
     const composerDisabled = !canUseGroupChat || messageAccessDenied || activityStarted
+    const deepLinkUrl = useMemo(() => {
+        if (!activity?.id || !shareOrigin) return ''
+        return buildActivityDeepLinkUrl(activity.id, shareOrigin)
+    }, [activity?.id, shareOrigin])
+    const shareEmailHref = useMemo(() => {
+        if (!activity?.id || !activity.title || !shareOrigin) return ''
+        return buildActivityShareEmailHref({
+            activityId: activity.id,
+            activityTitle: activity.title,
+            origin: shareOrigin,
+        })
+    }, [activity?.id, activity?.title, shareOrigin])
 
     useEffect(() => {
         if (!feedbackForm) return
@@ -185,6 +204,10 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
         setActivityImageUrl(resolvedImage.src)
         setShowDefaultAttribution(resolvedImage.isDefault)
     }, [resolvedImage.isDefault, resolvedImage.src])
+
+    useEffect(() => {
+        setShareOrigin(window.location.origin)
+    }, [])
 
     const handleJoin = async () => {
         try {
@@ -254,6 +277,45 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
         } catch (err) {
             setMessageError(err instanceof Error ? err.message : 'Failed to report message')
         }
+    }
+
+    const handleCopyDeepLink = async () => {
+        if (!deepLinkUrl) return
+
+        try {
+            await navigator.clipboard.writeText(deepLinkUrl)
+            setCopyStatus('copied')
+            window.setTimeout(() => setCopyStatus('idle'), 2000)
+        } catch {
+            setCopyStatus('failed')
+        }
+    }
+
+    const handleShareDeepLink = async () => {
+        if (!activity || !deepLinkUrl || !shareEmailHref) return
+
+        if (
+            typeof navigator.share === 'function' &&
+            shouldUseNativeActivityShare({
+                userAgent: navigator.userAgent,
+                maxTouchPoints: navigator.maxTouchPoints,
+            })
+        ) {
+            try {
+                await navigator.share({
+                    title: activity.title,
+                    text: 'Check out this OuterCircl activity.',
+                    url: deepLinkUrl,
+                })
+                return
+            } catch (err) {
+                if (err instanceof DOMException && err.name === 'AbortError') {
+                    return
+                }
+            }
+        }
+
+        window.location.href = shareEmailHref
     }
 
     const handleSubmitFeedback = async () => {
@@ -453,6 +515,47 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                                         Recurs: {recurrenceLabel(activity)}
                                                     </span>
                                                 </div>
+                                            ) : null}
+                                        </div>
+
+                                        <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+                                            <div className="space-y-1">
+                                                <div className="text-sm font-medium text-foreground">Share this activity</div>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Share by email or copy the link for SMS, WhatsApp, or any text chat.
+                                                </p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {shareEmailHref ? (
+                                                    <Button type="button" variant="outline" className="gap-2" onClick={handleShareDeepLink}>
+                                                        <Share2 className="h-4 w-4" />
+                                                        Share
+                                                    </Button>
+                                                ) : (
+                                                    <Button variant="outline" className="gap-2" disabled>
+                                                        <Share2 className="h-4 w-4" />
+                                                        Share
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    className="gap-2"
+                                                    onClick={handleCopyDeepLink}
+                                                    disabled={!deepLinkUrl}
+                                                >
+                                                    {copyStatus === 'copied' ? (
+                                                        <Check className="h-4 w-4" />
+                                                    ) : (
+                                                        <Copy className="h-4 w-4" />
+                                                    )}
+                                                    {copyStatus === 'copied' ? 'Copied' : 'Copy link'}
+                                                </Button>
+                                            </div>
+                                            {copyStatus === 'failed' ? (
+                                                <p className="text-xs text-muted-foreground">
+                                                    Copy failed. Please try again.
+                                                </p>
                                             ) : null}
                                         </div>
 
