@@ -18,11 +18,7 @@ import {
   getCategoryImageAttribution,
 } from '@/lib/activity-categories'
 import { genderRestrictionReason, meetsGenderRestriction } from '@/lib/activity-gender-restriction'
-import {
-  buildActivityDeepLinkUrl,
-  buildActivityShareEmailHref,
-  shouldUseNativeActivityShare,
-} from '@/lib/deep-links/activity'
+import { buildActivityDeepLinkUrl } from '@/lib/deep-links/activity'
 import type { Activity } from '@/lib/types/activity'
 import type { Gender } from '@/lib/types/profile'
 import { hasActivityStarted } from '@/src/utils/activityDateTime'
@@ -103,14 +99,6 @@ export function ActivityCard({
     if (!shareOrigin) return ''
     return buildActivityDeepLinkUrl(activity.id, shareOrigin)
   }, [activity.id, shareOrigin])
-  const shareEmailHref = useMemo(() => {
-    if (!shareOrigin) return ''
-    return buildActivityShareEmailHref({
-      activityId: activity.id,
-      activityTitle: activity.title,
-      origin: shareOrigin,
-    })
-  }, [activity.id, activity.title, shareOrigin])
   const canJoinByGender = meetsGenderRestriction(activity.genderRestriction, viewerGender ?? null)
   const genderJoinReason =
     participationStatus === 'not_joined' && !isHost && !canJoinByGender
@@ -178,30 +166,19 @@ export function ActivityCard({
   const handleShare = async (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
     event.stopPropagation()
-    if (!deepLinkUrl || !shareEmailHref) return
+    if (!deepLinkUrl || typeof navigator.share !== 'function') return
 
-    if (
-      typeof navigator.share === 'function' &&
-      shouldUseNativeActivityShare({
-        userAgent: navigator.userAgent,
-        maxTouchPoints: navigator.maxTouchPoints,
+    try {
+      await navigator.share({
+        title: activity.title,
+        text: 'Check out this OuterCircl activity.',
+        url: deepLinkUrl,
       })
-    ) {
-      try {
-        await navigator.share({
-          title: activity.title,
-          text: 'Check out this OuterCircl activity.',
-          url: deepLinkUrl,
-        })
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
         return
-      } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') {
-          return
-        }
       }
     }
-
-    window.location.href = shareEmailHref
   }
 
   return (
@@ -346,7 +323,7 @@ export function ActivityCard({
             <span className="font-medium text-foreground">{activity.waitlistCount ?? 0}</span>
           </span>
           <div className="flex shrink-0 gap-2">
-            {shareEmailHref ? (
+            {deepLinkUrl ? (
               <Button size="sm" variant="outline" className="gap-2" onClick={handleShare}>
                 <Share2 className="h-4 w-4" />
                 Share
