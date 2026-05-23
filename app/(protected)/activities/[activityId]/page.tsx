@@ -33,11 +33,7 @@ import {
 } from '@/lib/activity-categories'
 import { genderRestrictionReason, meetsGenderRestriction } from '@/lib/activity-gender-restriction'
 import { deleteActivityByHost, getDeleteActivityErrorMessage } from '@/lib/api/activity-management'
-import {
-    buildActivityDeepLinkUrl,
-    buildActivityShareEmailHref,
-    shouldUseNativeActivityShare,
-} from '@/lib/deep-links/activity'
+import { buildActivityDeepLinkUrl } from '@/lib/deep-links/activity'
 import type { ParticipationState } from '@/lib/types/activity'
 import { hasActivityStarted } from '@/src/utils/activityDateTime'
 
@@ -158,14 +154,6 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
         if (!activity?.id || !shareOrigin) return ''
         return buildActivityDeepLinkUrl(activity.id, shareOrigin)
     }, [activity?.id, shareOrigin])
-    const shareEmailHref = useMemo(() => {
-        if (!activity?.id || !activity.title || !shareOrigin) return ''
-        return buildActivityShareEmailHref({
-            activityId: activity.id,
-            activityTitle: activity.title,
-            origin: shareOrigin,
-        })
-    }, [activity?.id, activity?.title, shareOrigin])
 
     useEffect(() => {
         if (!feedbackForm) return
@@ -292,30 +280,19 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     }
 
     const handleShareDeepLink = async () => {
-        if (!activity || !deepLinkUrl || !shareEmailHref) return
+        if (!activity || !deepLinkUrl || typeof navigator.share !== 'function') return
 
-        if (
-            typeof navigator.share === 'function' &&
-            shouldUseNativeActivityShare({
-                userAgent: navigator.userAgent,
-                maxTouchPoints: navigator.maxTouchPoints,
+        try {
+            await navigator.share({
+                title: activity.title,
+                text: 'Check out this OuterCircl activity.',
+                url: deepLinkUrl,
             })
-        ) {
-            try {
-                await navigator.share({
-                    title: activity.title,
-                    text: 'Check out this OuterCircl activity.',
-                    url: deepLinkUrl,
-                })
+        } catch (err) {
+            if (err instanceof DOMException && err.name === 'AbortError') {
                 return
-            } catch (err) {
-                if (err instanceof DOMException && err.name === 'AbortError') {
-                    return
-                }
             }
         }
-
-        window.location.href = shareEmailHref
     }
 
     const handleSubmitFeedback = async () => {
@@ -522,11 +499,11 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
                                             <div className="space-y-1">
                                                 <div className="text-sm font-medium text-foreground">Share this activity</div>
                                                 <p className="text-sm text-muted-foreground">
-                                                    Share by email or copy the link for SMS, WhatsApp, or any text chat.
+                                                    Use your device share sheet or copy the link for SMS, WhatsApp, or any text chat.
                                                 </p>
                                             </div>
                                             <div className="flex flex-wrap gap-2">
-                                                {shareEmailHref ? (
+                                                {deepLinkUrl ? (
                                                     <Button type="button" variant="outline" className="gap-2" onClick={handleShareDeepLink}>
                                                         <Share2 className="h-4 w-4" />
                                                         Share
