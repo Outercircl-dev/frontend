@@ -18,7 +18,9 @@ import {
   getCategoryImageAttribution,
 } from '@/lib/activity-categories'
 import { genderRestrictionReason, meetsGenderRestriction } from '@/lib/activity-gender-restriction'
+import { getClientOrigin } from '@/lib/client-origin'
 import { buildActivityDeepLinkUrl } from '@/lib/deep-links/activity'
+import { shareActivityLink } from '@/lib/deep-links/share-activity'
 import type { Activity } from '@/lib/types/activity'
 import type { Gender } from '@/lib/types/profile'
 import { hasActivityStarted } from '@/src/utils/activityDateTime'
@@ -92,7 +94,7 @@ export function ActivityCard({
   const attribution = getCategoryImageAttribution(resolvedImage.category)
   const [activityImageUrl, setActivityImageUrl] = useState(resolvedImage.src)
   const [showDefaultAttribution, setShowDefaultAttribution] = useState(resolvedImage.isDefault)
-  const [shareOrigin, setShareOrigin] = useState<string | null>(null)
+  const [shareOrigin] = useState<string | null>(getClientOrigin)
   const hostLabel = activity.hostName || activity.hostUsername || activity.hostId.slice(0, 8)
   const targetHref = clickHref ?? `/activities/${activity.id}`
   const deepLinkUrl = useMemo(() => {
@@ -123,10 +125,6 @@ export function ActivityCard({
     setActivityImageUrl(resolvedImage.src)
     setShowDefaultAttribution(resolvedImage.isDefault)
   }, [resolvedImage.isDefault, resolvedImage.src])
-
-  useEffect(() => {
-    setShareOrigin(window.location.origin)
-  }, [])
 
   const handleCardClick = () => {
     router.push(targetHref)
@@ -166,19 +164,12 @@ export function ActivityCard({
   const handleShare = async (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
     event.stopPropagation()
-    if (!deepLinkUrl || typeof navigator.share !== 'function') return
+    if (!deepLinkUrl) return
 
-    try {
-      await navigator.share({
-        title: activity.title,
-        text: 'Check out this OuterCircl activity.',
-        url: deepLinkUrl,
-      })
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        return
-      }
-    }
+    await shareActivityLink({
+      title: activity.title,
+      url: deepLinkUrl,
+    })
   }
 
   return (
@@ -324,7 +315,7 @@ export function ActivityCard({
           </span>
           <div className="flex shrink-0 gap-2">
             {deepLinkUrl ? (
-              <Button size="sm" variant="outline" className="gap-2" onClick={handleShare}>
+              <Button type="button" size="sm" variant="outline" className="gap-2" onClick={handleShare}>
                 <Share2 className="h-4 w-4" />
                 Share
               </Button>
