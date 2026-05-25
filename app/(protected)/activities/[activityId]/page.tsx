@@ -33,7 +33,10 @@ import {
 } from '@/lib/activity-categories'
 import { genderRestrictionReason, meetsGenderRestriction } from '@/lib/activity-gender-restriction'
 import { deleteActivityByHost, getDeleteActivityErrorMessage } from '@/lib/api/activity-management'
+import { getClientOrigin } from '@/lib/client-origin'
+import { copyTextToClipboard } from '@/lib/copy-to-clipboard'
 import { buildActivityDeepLinkUrl } from '@/lib/deep-links/activity'
+import { shareActivityLink } from '@/lib/deep-links/share-activity'
 import type { ParticipationState } from '@/lib/types/activity'
 import { hasActivityStarted } from '@/src/utils/activityDateTime'
 
@@ -106,7 +109,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     const [participantRatings, setParticipantRatings] = useState<Record<string, { rating: number | null; comment: string }>>({})
     const [feedbackSubmitError, setFeedbackSubmitError] = useState<string | null>(null)
     const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
-    const [shareOrigin, setShareOrigin] = useState<string | null>(null)
+    const [shareOrigin] = useState<string | null>(getClientOrigin)
     const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
     const profileGender = useViewerGender(user?.supabaseUserId)
 
@@ -193,10 +196,6 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
         setShowDefaultAttribution(resolvedImage.isDefault)
     }, [resolvedImage.isDefault, resolvedImage.src])
 
-    useEffect(() => {
-        setShareOrigin(window.location.origin)
-    }, [])
-
     const handleJoin = async () => {
         try {
             setIsSubmitting(true)
@@ -270,28 +269,29 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     const handleCopyDeepLink = async () => {
         if (!deepLinkUrl) return
 
-        try {
-            await navigator.clipboard.writeText(deepLinkUrl)
-            setCopyStatus('copied')
+        const copied = await copyTextToClipboard(deepLinkUrl)
+        setCopyStatus(copied ? 'copied' : 'failed')
+        if (copied) {
             window.setTimeout(() => setCopyStatus('idle'), 2000)
-        } catch {
-            setCopyStatus('failed')
         }
     }
 
     const handleShareDeepLink = async () => {
-        if (!activity || !deepLinkUrl || typeof navigator.share !== 'function') return
+        if (!activity || !deepLinkUrl) return
 
-        try {
-            await navigator.share({
-                title: activity.title,
-                text: 'Check out this OuterCircl activity.',
-                url: deepLinkUrl,
-            })
-        } catch (err) {
-            if (err instanceof DOMException && err.name === 'AbortError') {
-                return
-            }
+        const result = await shareActivityLink({
+            title: activity.title,
+            url: deepLinkUrl,
+        })
+
+        if (result === 'copied') {
+            setCopyStatus('copied')
+            window.setTimeout(() => setCopyStatus('idle'), 2000)
+            return
+        }
+
+        if (result === 'failed') {
+            setCopyStatus('failed')
         }
     }
 
