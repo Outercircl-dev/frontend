@@ -1,14 +1,24 @@
 // Copyright (c) 2026 Outer Circle. All rights reserved.
 
-import { canUseWebShare, getSharePayload } from '@/lib/deep-links/share-activity'
+import {
+  buildSharePayloadCandidates,
+  canUseWebShare,
+  isNativeShareAvailable,
+  openNativeShareSheet,
+} from '@/lib/deep-links/share-activity'
 
 describe('share activity links', () => {
   const originalNavigator = global.navigator
+  const originalWindow = global.window
 
   afterEach(() => {
     Object.defineProperty(global, 'navigator', {
       configurable: true,
       value: originalNavigator,
+    })
+    Object.defineProperty(global, 'window', {
+      configurable: true,
+      value: originalWindow,
     })
   })
 
@@ -18,56 +28,88 @@ describe('share activity links', () => {
       value: {},
     })
 
-    expect(canUseWebShare('https://app.outercircl.test/activities/123')).toBe(false)
+    expect(canUseWebShare()).toBe(false)
   })
 
-  it('prefers the richest payload supported by canShare', () => {
-  const canShare = jest.fn(({ url, title, text }: { url?: string; title?: string; text?: string }) => {
-      if (title && text && url) return true
-      if (url) return true
-      return false
-    })
-
-    Object.defineProperty(global, 'navigator', {
-      configurable: true,
-      value: {
-        share: async () => undefined,
-        canShare,
-      },
-    })
-
-    expect(getSharePayload({
+  it('prefers url-only payloads first for mobile compatibility', () => {
+    expect(buildSharePayloadCandidates({
       title: 'Morning run',
       url: 'https://app.outercircl.test/activities/123',
-    })).toEqual({
-      title: 'Morning run',
-      text: 'Check out this OuterCircl activity.',
+    })[0]).toEqual({
       url: 'https://app.outercircl.test/activities/123',
     })
   })
 
-  it('falls back to url-only payloads when richer fields are unsupported', () => {
-    const canShare = jest.fn(({ url, title, text }: { url?: string; title?: string; text?: string }) => {
-      return Boolean(url && !title && !text)
+  it('returns unavailable when native share is not supported', async () => {
+    Object.defineProperty(global, 'navigator', {
+      configurable: true,
+      value: {},
     })
+
+    await expect(openNativeShareSheet({
+      title: 'Morning run',
+      url: 'https://app.outercircl.test/activities/123',
+    })).resolves.toBe('unavailable')
+  })
+
+  it('tries simpler payloads after richer payloads fail', async () => {
+    const share = jest.fn()
+      .mockRejectedValueOnce(new DOMException('Invalid share data', 'NotAllowedError'))
+      .mockResolvedValueOnce(undefined)
 
     Object.defineProperty(global, 'navigator', {
       configurable: true,
       value: {
-        share: async () => undefined,
-        canShare,
+        share,
       },
     })
 
-    expect(getSharePayload({
+    Object.defineProperty(global, 'window', {
+      configurable: true,
+      value: {
+        ...originalWindow,
+        isSecureContext: true,
+      },
+    })
+
+    await expect(openNativeShareSheet({
       title: 'Morning run',
       url: 'https://app.outercircl.test/activities/123',
-    })).toEqual({
+    })).resolves.toBe('shared')
+
+    expect(share).toHaveBeenCalledTimes(2)
+    expect(share.mock.calls[0][0]).toEqual({
+      url: 'https://app.outercircl.test/activities/123',
+    })
+    expect(share.mock.calls[1][0]).toEqual({
+      title: 'Morning run',
       url: 'https://app.outercircl.test/activities/123',
     })
   })
 
-  it('returns the first payload when canShare is not defined', () => {
+  it('returns cancelled when the user dismisses the share sheet', async () => {
+    Object.defineProperty(global, 'navigator', {
+      configurable: true,
+      value: {
+        share: jest.fn().mockRejectedValue(new DOMException('Share cancelled', 'AbortError')),
+      },
+    })
+
+    Object.defineProperty(global, 'window', {
+      configurable: true,
+      value: {
+        ...originalWindow,
+        isSecureContext: true,
+      },
+    })
+
+    await expect(openNativeShareSheet({
+      title: 'Morning run',
+      url: 'https://app.outercircl.test/activities/123',
+    })).resolves.toBe('cancelled')
+  })
+
+  it('requires a secure context for native sharing', () => {
     Object.defineProperty(global, 'navigator', {
       configurable: true,
       value: {
@@ -75,13 +117,14 @@ describe('share activity links', () => {
       },
     })
 
-    expect(getSharePayload({
-      title: 'Morning run',
-      url: 'https://app.outercircl.test/activities/123',
-    })).toEqual({
-      title: 'Morning run',
-      text: 'Check out this OuterCircl activity.',
-      url: 'https://app.outercircl.test/activities/123',
+    Object.defineProperty(global, 'window', {
+      configurable: true,
+      value: {
+        ...originalWindow,
+        isSecureContext: false,
+      },
     })
+
+    expect(isNativeShareAvailable()).toBe(false)
   })
 })
