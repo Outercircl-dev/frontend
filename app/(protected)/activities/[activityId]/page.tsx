@@ -5,6 +5,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { use, useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { ArrowLeft, CalendarDays, Check, Clock, Copy, Lock, MapPin, Pin, Share2, Users } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
@@ -33,7 +34,7 @@ import {
 } from '@/lib/activity-categories'
 import { genderRestrictionReason, meetsGenderRestriction } from '@/lib/activity-gender-restriction'
 import { deleteActivityByHost, getDeleteActivityErrorMessage } from '@/lib/api/activity-management'
-import { getClientOrigin } from '@/lib/client-origin'
+import { useClientOrigin } from '@/hooks/useClientOrigin'
 import { copyTextToClipboard } from '@/lib/copy-to-clipboard'
 import { buildActivityDeepLinkUrl } from '@/lib/deep-links/activity'
 import { shareActivityLink } from '@/lib/deep-links/share-activity'
@@ -109,7 +110,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     const [participantRatings, setParticipantRatings] = useState<Record<string, { rating: number | null; comment: string }>>({})
     const [feedbackSubmitError, setFeedbackSubmitError] = useState<string | null>(null)
     const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
-    const [shareOrigin] = useState<string | null>(getClientOrigin)
+    const shareOrigin = useClientOrigin()
     const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
     const profileGender = useViewerGender(user?.supabaseUserId)
 
@@ -277,7 +278,10 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
     }
 
     const handleShareDeepLink = async () => {
-        if (!activity || !deepLinkUrl) return
+        if (!activity || !deepLinkUrl) {
+            toast.error('Share link is not ready yet. Please try again.')
+            return
+        }
 
         const result = await shareActivityLink({
             title: activity.title,
@@ -287,11 +291,13 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
         if (result === 'copied') {
             setCopyStatus('copied')
             window.setTimeout(() => setCopyStatus('idle'), 2000)
+            toast.success('Link copied to clipboard')
             return
         }
 
         if (result === 'failed') {
             setCopyStatus('failed')
+            toast.error('Unable to share this activity right now.')
         }
     }
 
