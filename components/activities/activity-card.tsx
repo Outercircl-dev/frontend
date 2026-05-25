@@ -21,7 +21,7 @@ import {
 import { genderRestrictionReason, meetsGenderRestriction } from '@/lib/activity-gender-restriction'
 import { useClientOrigin } from '@/hooks/useClientOrigin'
 import { buildActivityDeepLinkUrl } from '@/lib/deep-links/activity'
-import { shareActivityLink } from '@/lib/deep-links/share-activity'
+import { notifyNativeShareResult, openNativeShareSheet } from '@/lib/deep-links/share-activity'
 import type { Activity } from '@/lib/types/activity'
 import type { Gender } from '@/lib/types/profile'
 import { hasActivityStarted } from '@/src/utils/activityDateTime'
@@ -162,7 +162,7 @@ export function ActivityCard({
     }
   }
 
-  const handleShare = async (event: MouseEvent<HTMLButtonElement>) => {
+  const handleShare = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
     event.stopPropagation()
     if (!deepLinkUrl) {
@@ -170,19 +170,10 @@ export function ActivityCard({
       return
     }
 
-    const result = await shareActivityLink({
+    void openNativeShareSheet({
       title: activity.title,
       url: deepLinkUrl,
-    })
-
-    if (result === 'copied') {
-      toast.success('Link copied to clipboard')
-      return
-    }
-
-    if (result === 'failed') {
-      toast.error('Unable to share this activity right now.')
-    }
+    }).then(notifyNativeShareResult)
   }
 
   return (

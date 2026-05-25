@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Outer Circle. All rights reserved.
 
-import { copyTextToClipboard } from '@/lib/copy-to-clipboard'
+import { toast } from 'sonner'
 
 type ShareActivityInput = {
   title: string
@@ -15,61 +15,69 @@ type SharePayload = {
 
 const SHARE_TEXT = 'Check out this OuterCircl activity.'
 
-function canSharePayload(payload: SharePayload): boolean {
-  if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
-    return false
-  }
+export type NativeShareResult = 'shared' | 'cancelled' | 'unavailable' | 'failed'
 
-  if (typeof navigator.canShare !== 'function') {
-    return true
-  }
-
-  try {
-    return navigator.canShare(payload)
-  } catch {
-    return false
-  }
-}
-
-export function getSharePayload(input: ShareActivityInput): SharePayload | null {
-  if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
-    return null
-  }
-
-  const candidates: SharePayload[] = [
-    { title: input.title, text: SHARE_TEXT, url: input.url },
+export function buildSharePayloadCandidates(input: ShareActivityInput): SharePayload[] {
+  return [
+    { url: input.url },
     { title: input.title, url: input.url },
     { text: SHARE_TEXT, url: input.url },
-    { url: input.url },
+    { title: input.title, text: SHARE_TEXT, url: input.url },
   ]
+}
 
-  for (const payload of candidates) {
-    if (canSharePayload(payload)) {
-      return payload
-    }
+export function isNativeShareAvailable(): boolean {
+  if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
+    return false
   }
 
-  return null
+  if (typeof window !== 'undefined' && !window.isSecureContext) {
+    return false
+  }
+
+  return true
 }
 
-export function canUseWebShare(url: string): boolean {
-  return getSharePayload({ title: 'Activity', url }) !== null
+export function canUseWebShare(): boolean {
+  return isNativeShareAvailable()
 }
 
-export async function shareActivityLink(input: ShareActivityInput): Promise<'shared' | 'copied' | 'failed'> {
-  const payload = getSharePayload(input)
+export async function openNativeShareSheet(input: ShareActivityInput): Promise<NativeShareResult> {
+  if (!isNativeShareAvailable()) {
+    return 'unavailable'
+  }
 
-  if (payload) {
+  for (const payload of buildSharePayloadCandidates(input)) {
+    if (typeof navigator.canShare === 'function') {
+      try {
+        if (!navigator.canShare(payload)) {
+          continue
+        }
+      } catch {
+        continue
+      }
+    }
+
     try {
       await navigator.share(payload)
       return 'shared'
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        return 'shared'
+        return 'cancelled'
       }
     }
   }
 
-  const copied = await copyTextToClipboard(input.url)
-  return copied ? 'copied' : 'failed'
+  return 'failed'
+}
+
+export function notifyNativeShareResult(result: NativeShareResult): void {
+  if (result === 'unavailable') {
+    toast.error("Native sharing isn't available in this browser. Use Copy link instead.")
+    return
+  }
+
+  if (result === 'failed') {
+    toast.error("Couldn't open the share panel. Use Copy link instead.")
+  }
 }

@@ -37,7 +37,7 @@ import { deleteActivityByHost, getDeleteActivityErrorMessage } from '@/lib/api/a
 import { useClientOrigin } from '@/hooks/useClientOrigin'
 import { copyTextToClipboard } from '@/lib/copy-to-clipboard'
 import { buildActivityDeepLinkUrl } from '@/lib/deep-links/activity'
-import { shareActivityLink } from '@/lib/deep-links/share-activity'
+import { notifyNativeShareResult, openNativeShareSheet } from '@/lib/deep-links/share-activity'
 import type { ParticipationState } from '@/lib/types/activity'
 import { hasActivityStarted } from '@/src/utils/activityDateTime'
 
@@ -277,28 +277,16 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ activ
         }
     }
 
-    const handleShareDeepLink = async () => {
+    const handleShareDeepLink = () => {
         if (!activity || !deepLinkUrl) {
             toast.error('Share link is not ready yet. Please try again.')
             return
         }
 
-        const result = await shareActivityLink({
+        void openNativeShareSheet({
             title: activity.title,
             url: deepLinkUrl,
-        })
-
-        if (result === 'copied') {
-            setCopyStatus('copied')
-            window.setTimeout(() => setCopyStatus('idle'), 2000)
-            toast.success('Link copied to clipboard')
-            return
-        }
-
-        if (result === 'failed') {
-            setCopyStatus('failed')
-            toast.error('Unable to share this activity right now.')
-        }
+        }).then(notifyNativeShareResult)
     }
 
     const handleSubmitFeedback = async () => {
