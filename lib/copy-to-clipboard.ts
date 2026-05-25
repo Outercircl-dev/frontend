@@ -28,8 +28,20 @@ export async function copyTextToClipboard(text: string): Promise<boolean> {
   textarea.style.pointerEvents = 'none'
 
   document.body.appendChild(textarea)
-  textarea.focus()
-  textarea.select()
+
+  if (typeof navigator !== 'undefined' && /ipad|iphone|ipod/i.test(navigator.userAgent)) {
+    textarea.contentEditable = 'true'
+    textarea.readOnly = false
+    const range = document.createRange()
+    range.selectNodeContents(textarea)
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+    textarea.setSelectionRange(0, text.length)
+  } else {
+    textarea.focus()
+    textarea.select()
+  }
 
   let copied = false
   try {

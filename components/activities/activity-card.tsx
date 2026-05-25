@@ -5,6 +5,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react'
 
+import { toast } from 'sonner'
 import { CalendarDays, Clock, Globe, Lock, MapPin, Share2, UserCircle2, Users } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
@@ -18,7 +19,7 @@ import {
   getCategoryImageAttribution,
 } from '@/lib/activity-categories'
 import { genderRestrictionReason, meetsGenderRestriction } from '@/lib/activity-gender-restriction'
-import { getClientOrigin } from '@/lib/client-origin'
+import { useClientOrigin } from '@/hooks/useClientOrigin'
 import { buildActivityDeepLinkUrl } from '@/lib/deep-links/activity'
 import { shareActivityLink } from '@/lib/deep-links/share-activity'
 import type { Activity } from '@/lib/types/activity'
@@ -94,7 +95,7 @@ export function ActivityCard({
   const attribution = getCategoryImageAttribution(resolvedImage.category)
   const [activityImageUrl, setActivityImageUrl] = useState(resolvedImage.src)
   const [showDefaultAttribution, setShowDefaultAttribution] = useState(resolvedImage.isDefault)
-  const [shareOrigin] = useState<string | null>(getClientOrigin)
+  const shareOrigin = useClientOrigin()
   const hostLabel = activity.hostName || activity.hostUsername || activity.hostId.slice(0, 8)
   const targetHref = clickHref ?? `/activities/${activity.id}`
   const deepLinkUrl = useMemo(() => {
@@ -164,12 +165,24 @@ export function ActivityCard({
   const handleShare = async (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
     event.stopPropagation()
-    if (!deepLinkUrl) return
+    if (!deepLinkUrl) {
+      toast.error('Share link is not ready yet. Please try again.')
+      return
+    }
 
-    await shareActivityLink({
+    const result = await shareActivityLink({
       title: activity.title,
       url: deepLinkUrl,
     })
+
+    if (result === 'copied') {
+      toast.success('Link copied to clipboard')
+      return
+    }
+
+    if (result === 'failed') {
+      toast.error('Unable to share this activity right now.')
+    }
   }
 
   return (
@@ -315,7 +328,14 @@ export function ActivityCard({
           </span>
           <div className="flex shrink-0 gap-2">
             {deepLinkUrl ? (
-              <Button type="button" size="sm" variant="outline" className="gap-2" onClick={handleShare}>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="gap-2"
+                onClick={handleShare}
+                onPointerDown={(event) => event.stopPropagation()}
+              >
                 <Share2 className="h-4 w-4" />
                 Share
               </Button>
@@ -325,7 +345,13 @@ export function ActivityCard({
                 Share
               </Button>
             )}
-            <Button size="sm" onClick={handleJoin} disabled={!canJoin || isJoining}>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleJoin}
+              onPointerDown={(event) => event.stopPropagation()}
+              disabled={!canJoin || isJoining}
+            >
               {isJoining ? 'Joining...' : joinButtonLabel}
             </Button>
           </div>

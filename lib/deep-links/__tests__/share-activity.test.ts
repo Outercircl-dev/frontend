@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Outer Circle. All rights reserved.
 
-import { canUseWebShare } from '@/lib/deep-links/share-activity'
+import { canUseWebShare, getSharePayload } from '@/lib/deep-links/share-activity'
 
-describe('canUseWebShare', () => {
+describe('share activity links', () => {
   const originalNavigator = global.navigator
 
   afterEach(() => {
@@ -21,7 +21,53 @@ describe('canUseWebShare', () => {
     expect(canUseWebShare('https://app.outercircl.test/activities/123')).toBe(false)
   })
 
-  it('returns true when navigator.share exists and canShare is not defined', () => {
+  it('prefers the richest payload supported by canShare', () => {
+  const canShare = jest.fn(({ url, title, text }: { url?: string; title?: string; text?: string }) => {
+      if (title && text && url) return true
+      if (url) return true
+      return false
+    })
+
+    Object.defineProperty(global, 'navigator', {
+      configurable: true,
+      value: {
+        share: async () => undefined,
+        canShare,
+      },
+    })
+
+    expect(getSharePayload({
+      title: 'Morning run',
+      url: 'https://app.outercircl.test/activities/123',
+    })).toEqual({
+      title: 'Morning run',
+      text: 'Check out this OuterCircl activity.',
+      url: 'https://app.outercircl.test/activities/123',
+    })
+  })
+
+  it('falls back to url-only payloads when richer fields are unsupported', () => {
+    const canShare = jest.fn(({ url, title, text }: { url?: string; title?: string; text?: string }) => {
+      return Boolean(url && !title && !text)
+    })
+
+    Object.defineProperty(global, 'navigator', {
+      configurable: true,
+      value: {
+        share: async () => undefined,
+        canShare,
+      },
+    })
+
+    expect(getSharePayload({
+      title: 'Morning run',
+      url: 'https://app.outercircl.test/activities/123',
+    })).toEqual({
+      url: 'https://app.outercircl.test/activities/123',
+    })
+  })
+
+  it('returns the first payload when canShare is not defined', () => {
     Object.defineProperty(global, 'navigator', {
       configurable: true,
       value: {
@@ -29,6 +75,13 @@ describe('canUseWebShare', () => {
       },
     })
 
-    expect(canUseWebShare('https://app.outercircl.test/activities/123')).toBe(true)
+    expect(getSharePayload({
+      title: 'Morning run',
+      url: 'https://app.outercircl.test/activities/123',
+    })).toEqual({
+      title: 'Morning run',
+      text: 'Check out this OuterCircl activity.',
+      url: 'https://app.outercircl.test/activities/123',
+    })
   })
 })
