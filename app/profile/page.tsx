@@ -3,6 +3,8 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+
+import { buildLoginPath } from '@/lib/auth/return-url'
 import {
     CalendarClock,
     CheckCircle2,
@@ -103,7 +105,7 @@ export default async function ProfilePage() {
     const { profile, error } = await getProfileAction()
 
     if (error === 'Not authenticated') {
-        redirect('/login')
+        redirect(buildLoginPath('/profile'))
     }
 
     if (error) {

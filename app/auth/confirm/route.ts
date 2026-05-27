@@ -2,16 +2,42 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { getUserAuthState, getRedirectUrlForState } from "@/lib/auth-state-machine";
+import { getUserAuthState } from "@/lib/auth-state-machine";
+import {
+    RETURN_URL_COOKIE,
+    RETURN_URL_PARAM,
+    appendReturnUrl,
+    buildLoginPath,
+    readReturnUrl,
+    resolvePostAuthRedirect,
+} from "@/lib/auth/return-url";
 import type { BackendMeResponse } from "@/lib/types/auth";
 import type { Session } from "@supabase/supabase-js";
 
 const API_URL = process.env.API_URL;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
 
+function getReturnUrl(request: NextRequest): string | null {
+    const fromQuery = request.nextUrl.searchParams.get(RETURN_URL_PARAM);
+    const fromCookie = request.cookies.get(RETURN_URL_COOKIE)?.value;
+    return readReturnUrl(fromQuery, fromCookie);
+}
+
+function redirectToLoginWithReturn(
+    origin: string,
+    returnUrl: string | null,
+    errorMessage: string,
+): NextResponse {
+    const loginPath = returnUrl ? buildLoginPath(returnUrl) : '/login';
+    const url = new URL(loginPath, origin);
+    url.searchParams.set('error', errorMessage);
+    return NextResponse.redirect(url);
+}
+
 export async function GET(request: NextRequest) {
     const origin = SITE_URL ?? request.nextUrl.origin
     const requestUrl = new URL(request.url)
+    const returnUrl = getReturnUrl(request);
     const tokenHash = requestUrl.searchParams.get('token_hash');
     const code = requestUrl.searchParams.get('code');
     const errorCode = requestUrl.searchParams.get('error_code');
@@ -30,9 +56,7 @@ export async function GET(request: NextRequest) {
         })
 
         if (error) {
-            const url = new URL('/login', origin);
-            url.searchParams.set('error', error.message);
-            return NextResponse.redirect(url);
+            return redirectToLoginWithReturn(origin, returnUrl, error.message);
         }
 
         accessToken = data.session?.access_token;
@@ -45,14 +69,11 @@ export async function GET(request: NextRequest) {
             session = currentSessionData.session;
         } else {
             // No token_hash and no session means real auth failure.
-            const url = new URL('/login', origin);
-            url.searchParams.set('error', 'Authentication Unsuccessful');
-            return NextResponse.redirect(url);
+            return redirectToLoginWithReturn(origin, returnUrl, 'Authentication Unsuccessful');
         }
     }
 
-    // Default redirect destination path
-    let redirectPath = '/onboarding/profile'
+    let redirectPath = appendReturnUrl('/onboarding/profile', returnUrl)
 
     // Call backend /me to get user info and determine redirect (per architect review)
     if (accessToken && API_URL) {
@@ -79,14 +100,11 @@ export async function GET(request: NextRequest) {
                 const emailVerified = session?.user?.email_confirmed_at !== null;
                 const profileCompleted = userData.hasOnboarded; // Use hasOnboarded from backend
                 const authState = getUserAuthState(emailVerified, profileCompleted);
-                redirectPath = getRedirectUrlForState(authState) ?? '/feed';
+                redirectPath = resolvePostAuthRedirect({ authState, returnUrl });
             } else {
                 // Backend /me failed
                 if (backendResponse.status === 401) {
-                    // Authentication failed - token invalid, redirect to login
-                    const url = new URL('/login', origin);
-                    url.searchParams.set('error', 'Authentication failed');
-                    return NextResponse.redirect(url);
+                    return redirectToLoginWithReturn(origin, returnUrl, 'Authentication failed');
                 } else {
                     // Service error (500, 503, etc.) - for new users completing magic link,
                     // allow onboarding as fallback (backend might be temporarily down)
@@ -107,13 +125,11 @@ export async function GET(request: NextRequest) {
         const errorMsg = !accessToken
             ? 'Authentication+failed'
             : 'Configuration+error';
-        const url = new URL('/login', origin);
-        url.searchParams.set('error', errorMsg);
-        return NextResponse.redirect(url);
+        return redirectToLoginWithReturn(origin, returnUrl, errorMsg.replace(/\+/g, ' '));
     }
 
-    // Create redirect response with computed path
-    // Supabase cookies are already set via createClient() server function's cookie handling
     const redirectUrl = new URL(redirectPath, origin);
-    return NextResponse.redirect(redirectUrl);
+    const response = NextResponse.redirect(redirectUrl);
+    response.cookies.delete(RETURN_URL_COOKIE);
+    return response;
 }
