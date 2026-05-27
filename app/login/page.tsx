@@ -4,6 +4,7 @@ import Image from 'next/image'
 import type { Metadata } from 'next'
 
 import { AuthForm } from '@/components/auth/auth-form'
+import { sanitizeReturnUrl } from '@/lib/auth/return-url'
 
 export const metadata: Metadata = {
     title: 'Login',
@@ -14,12 +15,15 @@ export const metadata: Metadata = {
 }
 
 interface LoginPageProps {
-    searchParams: Promise<{ error?: string | string[] }>
+    searchParams: Promise<{ error?: string | string[]; returnUrl?: string | string[] }>
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
     const params = await searchParams
     const errorValue = params.error
+    const returnUrlValue = params.returnUrl
+    const returnUrlRaw = Array.isArray(returnUrlValue) ? returnUrlValue[0] : returnUrlValue
+    const returnUrl = sanitizeReturnUrl(returnUrlRaw)
     const errorMessage = errorValue
         ? decodeURIComponent(
               (Array.isArray(errorValue) ? errorValue[0] : errorValue).replace(/\+/g, ' ')
@@ -52,7 +56,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                             {errorMessage}
                         </div>
                     )}
-                    <AuthForm />
+                    <AuthForm returnUrl={returnUrl} />
                     <p className="text-center text-sm text-muted-foreground">
                         By continuing you agree to the OuterCircl community guidelines and privacy
                         promise.

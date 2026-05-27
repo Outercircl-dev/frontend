@@ -24,7 +24,11 @@ const INTENT_OPTIONS: { value: Intent; label: string; description: string }[] = 
     { value: 'signup', label: 'Join', description: 'First-time guest' },
 ]
 
-export function AuthForm() {
+interface AuthFormProps {
+    returnUrl?: string | null
+}
+
+export function AuthForm({ returnUrl }: AuthFormProps) {
     const [intent, setIntent] = useState<Intent>('signin')
     const formRef = useRef<HTMLFormElement>(null)
     const [state, formAction] = useActionState<VerifyEmailState, FormData>(
@@ -81,6 +85,7 @@ export function AuthForm() {
 
                 <form ref={formRef} action={formAction} className="space-y-4" noValidate>
                     <input type="hidden" name="intent" value={intent} />
+                    {returnUrl ? <input type="hidden" name="returnUrl" value={returnUrl} /> : null}
                     <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
                         <Input

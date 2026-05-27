@@ -6,6 +6,8 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 
+import { applyReturnUrlCookie, sanitizeReturnUrl } from '@/lib/auth/return-url'
+
 import type { VerifyEmailState } from './state'
 
 const authSchema = z.object({
@@ -42,6 +44,11 @@ export async function verifyEmailAction(
         }
         const supabase = await createClient()
         const { email, intent } = parsed.data
+        const returnUrl = sanitizeReturnUrl(formData.get('returnUrl')?.toString())
+        // Supabase allowlists exact redirect URLs and strips query params from
+        // emailRedirectTo — persist returnUrl in a cookie instead.
+        const cookieStore = await cookies()
+        applyReturnUrlCookie(cookieStore, returnUrl)
         const redirectTo = `${getBaseUrl()}/auth/confirm`
 
         // For sign in, we still allow creating user if they don't exist

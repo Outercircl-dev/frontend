@@ -3,9 +3,10 @@
 'use client';
 
 import { useEffect, type ReactNode } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { useAuthState } from '@/hooks/useAuthState';
+import { buildLoginPath } from '@/lib/auth/return-url';
 import { UserAuthState } from '@/lib/auth-state-machine';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -29,13 +30,16 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const { state, redirectUrl, isLoading, error } = useAuthState();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // Handle redirects based on backend state
   useEffect(() => {
     if (isLoading) return; // Wait for auth data
 
     if (error || !state) {
-      router.push('/login');
+      const query = searchParams.toString();
+      const returnPath = query ? `${pathname}?${query}` : pathname;
+      router.push(buildLoginPath(returnPath));
       return;
     }
 
@@ -46,7 +50,7 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
     if (redirectUrl && redirectUrl !== pathname) {
       router.push(redirectUrl);
     }
-  }, [isLoading, error, state, redirectUrl, pathname, router]);
+  }, [isLoading, error, state, redirectUrl, pathname, router, searchParams]);
 
   if (isLoading) {
     return (

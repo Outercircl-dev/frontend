@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { useForm, FormProvider, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -19,6 +19,7 @@ import {
 import { getInterestsAction } from '@/actions/profile'
 import { completeProfileAction } from '@/actions/profile/complete-profile-action'
 import { completeProfileSchema, defaultProfileValues } from '@/lib/validations/profile'
+import { resolveReturnOrDefault } from '@/lib/auth/return-url'
 import type {
   OnboardingFormData,
   InterestCategory,
@@ -28,6 +29,7 @@ import type {
 
 export default function OnboardingProfilePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [currentStep, setCurrentStep] = useState(1)
   const [categories, setCategories] = useState<InterestCategory[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -141,7 +143,7 @@ export default function OnboardingProfilePage() {
         status: 'success',
         message: 'Profile saved successfully!',
       })
-      router.push('/profile')
+      router.push(resolveReturnOrDefault(searchParams.get('returnUrl'), '/profile'))
     } catch (error) {
       console.error('Submit error:', error)
       setFormState({

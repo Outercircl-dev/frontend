@@ -8,6 +8,7 @@ import { ProtectedHeader } from '@/components/layout/ProtectedHeader'
 import { EditProfileForm } from '@/components/profile/EditProfileForm'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { buildLoginPath } from '@/lib/auth/return-url'
 import { mapUserProfileToForm } from '@/lib/profile/map-user-profile-to-form'
 
 export const dynamic = 'force-dynamic'
@@ -19,7 +20,7 @@ export default async function EditProfilePage() {
   ])
 
   if (error === 'Not authenticated') {
-    redirect('/login')
+    redirect(buildLoginPath('/profile/edit'))
   }
 
   if (error) {

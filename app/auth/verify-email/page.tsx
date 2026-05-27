@@ -3,11 +3,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useAuthState } from '@/hooks/useAuthState';
+import { UserAuthState } from '@/lib/auth-state-machine';
+import { appendReturnUrl, resolveReturnOrDefault } from '@/lib/auth/return-url';
 
 /**
  * Email Verification Page
@@ -23,18 +25,34 @@ import { useAuthState } from '@/hooks/useAuthState';
  * - Manual continue button
  */
 export default function VerifyEmailPage() {
-  const { user, redirectUrl } = useAuthState();
+  const { user, redirectUrl, state } = useAuthState();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrlParam = searchParams.get('returnUrl');
+
+  const nextPath = (() => {
+    if (state === UserAuthState.ACTIVE) {
+      return resolveReturnOrDefault(returnUrlParam, '/feed');
+    }
+    if (!redirectUrl || redirectUrl === '/auth/verify-email') {
+      return null;
+    }
+    const basePath = redirectUrl.split('?')[0] ?? redirectUrl;
+    if (returnUrlParam && (basePath === '/onboarding/profile' || basePath === '/auth/verify-email')) {
+      return appendReturnUrl(basePath, returnUrlParam);
+    }
+    return redirectUrl;
+  })();
 
   useEffect(() => {
-    if (!redirectUrl || redirectUrl === '/auth/verify-email') return;
+    if (!nextPath) return;
 
     const timer = setTimeout(() => {
-      router.push(redirectUrl);
+      router.push(nextPath);
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [redirectUrl, router]);
+  }, [nextPath, router]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-background to-secondary">
@@ -63,7 +81,7 @@ export default function VerifyEmailPage() {
 
           <div className="space-y-3 pt-4">
             <Button
-              onClick={() => redirectUrl && router.push(redirectUrl)}
+              onClick={() => nextPath && router.push(nextPath)}
               className="w-full"
               size="lg"
             >
